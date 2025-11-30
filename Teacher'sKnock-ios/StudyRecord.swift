@@ -13,9 +13,13 @@ final class StudyRecord {
     // 기록 날짜
     var date: Date
     
-    init(durationSeconds: Int, areaName: String, date: Date = Date()) {
+    // ✨ 주인 이름표 (누가 공부했는지 저장)
+    var ownerID: String
+    
+    init(durationSeconds: Int, areaName: String, date: Date = Date(), ownerID: String) {
         self.durationSeconds = durationSeconds
         self.areaName = areaName
         self.date = date
+        self.ownerID = ownerID
     }
 }
