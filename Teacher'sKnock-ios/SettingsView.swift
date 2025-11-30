@@ -49,7 +49,7 @@ struct SettingsView: View {
                     }
                     .foregroundColor(.red)
                 } header: {
-                    Text("위험 구역")
+                    Text("Teacher's Knock 회원 탈퇴 안내")
                 } footer: {
                     Text("탈퇴 시 모든 데이터(목표, 일정, 기록)가 영구적으로 삭제됩니다.")
                 }

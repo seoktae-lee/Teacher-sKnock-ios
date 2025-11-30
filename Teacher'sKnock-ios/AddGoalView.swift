@@ -15,7 +15,7 @@ struct AddGoalView: View {
         NavigationStack {
             Form {
                 Section(header: Text("목표 이름")) {
-                    TextField("예: 2026학년도 초등 임용", text: $title)
+                    TextField("예: 2027학년도 초등 임용", text: $title)
                 }
                 
                 Section(header: Text("디데이 날짜")) {
