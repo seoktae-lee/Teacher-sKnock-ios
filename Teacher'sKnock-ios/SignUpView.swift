@@ -10,10 +10,10 @@ struct SignUpView: View {
     @State private var confirmPassword = ""
     @State private var selectedUniversity = "서울교육대학교"
     
-    // ✨ 약관 동의 상태 변수 (추가됨)
+    // 약관 동의 상태
     @State private var isAgreed = false
     
-    // 인증 프로세스 상태 관리
+    // 인증 프로세스 상태
     @State private var isEmailVerified = false
     @State private var isVerificationSent = false
     @State private var timer: Timer?
@@ -56,12 +56,19 @@ struct SignUpView: View {
                                 .font(.caption).foregroundColor(.gray).padding(.leading, 5)
                             
                             HStack {
-                                TextField("실제 사용 중인 이메일 입력", text: $email)
-                                    .padding()
-                                    .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.gray.opacity(0.4), lineWidth: 1))
-                                    .autocapitalization(.none)
-                                    .keyboardType(.emailAddress)
-                                    .disabled(isVerificationSent)
+                                // ✨ 수정됨: verbatim을 사용하여 링크 감지 차단 + 회색 고정
+                                ZStack(alignment: .leading) {
+                                    if email.isEmpty {
+                                        Text(verbatim: "예: teacher@example.com") // verbatim: 있는 그대로 출력
+                                            .foregroundColor(Color.gray.opacity(0.6)) // 연한 회색 강제 적용
+                                    }
+                                    TextField("", text: $email)
+                                        .autocapitalization(.none)
+                                        .keyboardType(.emailAddress)
+                                        .disabled(isVerificationSent)
+                                }
+                                .padding()
+                                .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.gray.opacity(0.4), lineWidth: 1))
                                 
                                 Button(action: sendVerificationEmail) {
                                     Text(isEmailVerified ? "완료" : (isVerificationSent ? "재전송" : "인증"))
@@ -106,7 +113,7 @@ struct SignUpView: View {
                                 }
                                 .padding(.horizontal, 25)
                                 
-                                // ✨ 약관 동의 체크박스 (추가됨)
+                                // 약관 동의 체크박스
                                 HStack(alignment: .top) {
                                     Button(action: { isAgreed.toggle() }) {
                                         Image(systemName: isAgreed ? "checkmark.square.fill" : "square")
@@ -120,11 +127,11 @@ struct SignUpView: View {
                                             .foregroundColor(.black)
                                         
                                         HStack(spacing: 0) {
-                                            Link("이용약관", destination: URL(string: "https://www.google.com")!) // 나중에 노션 링크로 교체
+                                            Link("이용약관", destination: URL(string: "https://www.google.com")!)
                                                 .foregroundColor(brandColor)
                                             Text(" 및 ")
                                                 .foregroundColor(.gray)
-                                            Link("개인정보 처리방침", destination: URL(string: "https://www.google.com")!) // 나중에 노션 링크로 교체
+                                            Link("개인정보 처리방침", destination: URL(string: "https://www.google.com")!)
                                                 .foregroundColor(brandColor)
                                         }
                                         .font(.caption)
@@ -136,12 +143,12 @@ struct SignUpView: View {
                                 
                                 // 최종 가입 버튼
                                 Button(action: finalizeSignup) {
-                                    Text("티노 시작하기")
+                                    Text("합격의 문 두드리기")
                                         .frame(maxWidth: .infinity).padding()
-                                        .background(isAgreed ? brandColor : Color.gray) // 동의 안 하면 회색
+                                        .background(isAgreed ? brandColor : Color.gray)
                                         .foregroundColor(.white).font(.headline).cornerRadius(8)
                                 }
-                                .disabled(!isAgreed) // 동의 안 하면 클릭 불가
+                                .disabled(!isAgreed)
                                 .padding(.horizontal, 25).padding(.top, 10)
                             }
                             .transition(.opacity)
@@ -163,8 +170,7 @@ struct SignUpView: View {
         }
     }
     
-    // ... (이하 로직 함수들은 기존과 동일합니다. 편의를 위해 전체 포함)
-    
+    // ... (로직 함수는 기존과 동일)
     func sendVerificationEmail() {
         let tempPassword = UUID().uuidString
         Auth.auth().createUser(withEmail: email, password: tempPassword) { result, error in
@@ -205,7 +211,6 @@ struct SignUpView: View {
         guard password == confirmPassword else {
             alertTitle="알림"; alertMessage="비밀번호가 일치하지 않습니다."; showAlert=true; return
         }
-        // ✨ 약관 동의 체크 (한 번 더 확인)
         guard isAgreed else {
             alertTitle="알림"; alertMessage="약관에 동의해주세요."; showAlert=true; return
         }
