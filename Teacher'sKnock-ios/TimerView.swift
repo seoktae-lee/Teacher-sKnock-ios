@@ -4,13 +4,13 @@ import SwiftData
 struct TimerView: View {
     @Environment(\.modelContext) private var modelContext
     
-    // 타이머 상태 관리 변수들
-    @State private var timeElapsed: Int = 0 // 경과 시간 (초)
+    // 타이머 상태 변수
+    @State private var timeElapsed: Int = 0
     @State private var isRunning = false
     @State private var timer: Timer?
-    @State private var selectedSubject = "교육학" // 기본 선택 과목
+    @State private var selectedSubject = "교육학" // 기본 과목
     
-    // 교대생 맞춤 과목 리스트
+    // 과목 리스트
     let subjects = ["교육학", "전공 A", "전공 B", "교직 논술", "한국사"]
     
     private let brandColor = Color(red: 0.35, green: 0.65, blue: 0.95)
@@ -19,40 +19,52 @@ struct TimerView: View {
         NavigationStack {
             VStack(spacing: 40) {
                 
-                // 1. 과목 선택
-                VStack {
+                // 1. 과목 선택 (디자인 개선)
+                VStack(spacing: 10) {
                     Text("지금 공부할 과목")
                         .font(.caption)
                         .foregroundColor(.gray)
                     
-                    Picker("과목", selection: $selectedSubject) {
+                    Menu {
                         ForEach(subjects, id: \.self) { subject in
-                            Text(subject).tag(subject)
+                            Button(subject) {
+                                selectedSubject = subject
+                            }
                         }
+                    } label: {
+                        HStack {
+                            Text(selectedSubject)
+                                .font(.headline)
+                            Image(systemName: "chevron.down")
+                                .font(.caption)
+                        }
+                        .foregroundColor(brandColor)
+                        .padding(.vertical, 10)
+                        .padding(.horizontal, 20)
+                        .background(Color.blue.opacity(0.1))
+                        .cornerRadius(20)
                     }
-                    .pickerStyle(.menu)
-                    .tint(brandColor)
-                    .padding(.horizontal)
-                    .background(Color.gray.opacity(0.1))
-                    .cornerRadius(10)
                 }
-                .padding(.top, 50)
+                .padding(.top, 30)
                 
-                // 2. 타이머 시간 표시 (00:00:00)
+                // 2. 타이머 시간 표시
                 Text(formatTime(seconds: timeElapsed))
-                    .font(.system(size: 60, weight: .bold, design: .monospaced))
+                    .font(.system(size: 70, weight: .bold, design: .monospaced))
                     .foregroundColor(.primary)
                     .padding()
                 
-                // 3. 컨트롤 버튼 (시작/정지/저장)
+                // 3. 컨트롤 버튼
                 HStack(spacing: 30) {
                     if isRunning {
                         // 정지 버튼
                         Button(action: stopTimer) {
                             VStack {
                                 Image(systemName: "pause.circle.fill")
-                                    .font(.system(size: 60))
+                                    .resizable()
+                                    .frame(width: 70, height: 70)
                                 Text("일시정지")
+                                    .font(.caption)
+                                    .padding(.top, 5)
                             }
                         }
                         .foregroundColor(.orange)
@@ -61,20 +73,26 @@ struct TimerView: View {
                         Button(action: startTimer) {
                             VStack {
                                 Image(systemName: "play.circle.fill")
-                                    .font(.system(size: 60))
+                                    .resizable()
+                                    .frame(width: 70, height: 70)
                                 Text(timeElapsed > 0 ? "계속하기" : "시작")
+                                    .font(.caption)
+                                    .padding(.top, 5)
                             }
                         }
                         .foregroundColor(brandColor)
                     }
                     
-                    // 완료/저장 버튼 (시간이 1초라도 있을 때만 표시)
+                    // 저장 버튼 (시간이 있을 때만 표시)
                     if timeElapsed > 0 && !isRunning {
                         Button(action: saveRecord) {
                             VStack {
                                 Image(systemName: "checkmark.circle.fill")
-                                    .font(.system(size: 60))
+                                    .resizable()
+                                    .frame(width: 70, height: 70)
                                 Text("완료 및 저장")
+                                    .font(.caption)
+                                    .padding(.top, 5)
                             }
                         }
                         .foregroundColor(.green)
@@ -83,14 +101,25 @@ struct TimerView: View {
                 
                 Spacer()
                 
-                // 4. 최근 공부 기록 (간단히 보여주기)
+                // 4. 최근 기록 뷰
                 RecentRecordsView()
             }
             .navigationTitle("집중 타이머")
+            // ✨ [핵심] 통계 화면으로 이동하는 버튼 추가
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    NavigationLink(destination: StatisticsView()) {
+                        Image(systemName: "chart.pie.fill") // 파이 차트 아이콘
+                            .font(.title3)
+                            .foregroundColor(brandColor)
+                    }
+                }
+            }
         }
     }
     
-    // 타이머 시작 로직
+    // --- 로직 함수들 ---
+    
     func startTimer() {
         isRunning = true
         timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { _ in
@@ -98,40 +127,31 @@ struct TimerView: View {
         }
     }
     
-    // 타이머 정지 로직
     func stopTimer() {
         isRunning = false
         timer?.invalidate()
         timer = nil
     }
     
-    // 기록 저장 및 리셋 로직
     func saveRecord() {
-        let newRecord = StudyRecord(
-            durationSeconds: timeElapsed,
-            areaName: selectedSubject,
-            date: Date()
-        )
+        let newRecord = StudyRecord(durationSeconds: timeElapsed, areaName: selectedSubject, date: Date())
         modelContext.insert(newRecord)
         
-        // 초기화
+        // 저장 후 초기화
         timeElapsed = 0
         stopTimer()
-        print("공부 기록 저장 완료: \(newRecord.areaName) - \(newRecord.durationSeconds)초")
     }
     
-    // 초(Int)를 "HH:mm:ss" 문자열로 변환하는 함수
     func formatTime(seconds: Int) -> String {
-        let hours = seconds / 3600
-        let minutes = (seconds % 3600) / 60
-        let seconds = seconds % 60
-        return String(format: "%02d:%02d:%02d", hours, minutes, seconds)
+        let h = seconds / 3600
+        let m = (seconds % 3600) / 60
+        let s = seconds % 60
+        return String(format: "%02d:%02d:%02d", h, m, s)
     }
 }
 
-// 간단히 최근 기록을 보여주는 하위 뷰
+// 하위 뷰: 최근 학습 기록
 struct RecentRecordsView: View {
-    // 최신순으로 3개만 가져오기
     @Query(sort: \StudyRecord.date, order: .reverse) private var records: [StudyRecord]
     
     var body: some View {
@@ -139,23 +159,30 @@ struct RecentRecordsView: View {
             Text("최근 학습 기록")
                 .font(.headline)
                 .padding(.horizontal)
+                .padding(.bottom, 5)
             
             List {
-                // 상위 5개만 보여줌
                 ForEach(records.prefix(5)) { record in
                     HStack {
                         Text(record.areaName)
                             .font(.subheadline)
                             .bold()
                         Spacer()
-                        Text("\(record.durationSeconds / 60)분 \(record.durationSeconds % 60)초")
-                            .font(.caption)
-                            .foregroundColor(.gray)
+                        // 1시간 이상이면 시간 단위, 아니면 분/초 단위 표시
+                        if record.durationSeconds >= 3600 {
+                            Text("\(record.durationSeconds / 3600)시간 \((record.durationSeconds % 3600) / 60)분")
+                                .font(.caption)
+                                .foregroundColor(.gray)
+                        } else {
+                            Text("\(record.durationSeconds / 60)분 \(record.durationSeconds % 60)초")
+                                .font(.caption)
+                                .foregroundColor(.gray)
+                        }
                     }
                 }
             }
             .listStyle(.plain)
-            .frame(height: 200) // 리스트 높이 제한
+            .frame(height: 200)
         }
     }
 }
