@@ -4,20 +4,13 @@ import FirebaseAuth
 
 struct GoalListView: View {
     @Query private var goals: [Goal]
-    
     @State private var showingAddGoalSheet = false
     @State private var showingCharacterDetail = false
     @State private var selectedGoal: Goal?
     @State private var todayQuote: Quote = Quote(text: "로딩 중...", author: "")
-    
-    private let brandColor = Color(red: 0.35, green: 0.65, blue: 0.95)
-    
-    // ✨ AuthManager 연결 (닉네임 가져오기 위해)
     @EnvironmentObject var authManager: AuthManager
-    
-    private var currentUserId: String {
-        Auth.auth().currentUser?.uid ?? ""
-    }
+    private let brandColor = Color(red: 0.35, green: 0.65, blue: 0.95)
+    private var currentUserId: String { Auth.auth().currentUser?.uid ?? "" }
     
     init(userId: String) {
         _goals = Query(filter: #Predicate<Goal> { goal in
@@ -28,49 +21,32 @@ struct GoalListView: View {
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
-                QuoteCard(quote: todayQuote)
-                    .padding()
-                
+                QuoteCard(quote: todayQuote).padding()
                 if goals.isEmpty {
-                    ContentUnavailableView {
-                        Label("목표가 없습니다", systemImage: "target")
-                    } description: {
-                        Text("우측 상단 + 버튼을 눌러\n시험 목표를 추가해보세요.")
-                    }
+                    ContentUnavailableView { Label("목표가 없습니다", systemImage: "target") } description: { Text("우측 상단 + 버튼을 눌러\n시험 목표를 추가해보세요.") }
                 } else {
                     List {
                         ForEach(goals) { goal in
-                            Button(action: {
-                                selectedGoal = goal
-                                showingCharacterDetail = true
-                            }) {
+                            Button(action: { selectedGoal = goal; showingCharacterDetail = true }) {
                                 GoalRow(goal: goal, userId: currentUserId)
                             }
-                            .buttonStyle(.plain)
-                            .listRowSeparator(.hidden)
+                            .buttonStyle(.plain).listRowSeparator(.hidden)
                         }
                         .onDelete(perform: deleteGoals)
                     }
                     .listStyle(.plain)
                 }
             }
-            // ✨ 네비게이션 타이틀에 닉네임 적용!
             .navigationTitle("\(authManager.userNickname)님의 D-day")
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button(action: { showingAddGoalSheet = true }) {
-                        Image(systemName: "plus")
-                            .foregroundColor(brandColor)
-                    }
+                    Button(action: { showingAddGoalSheet = true }) { Image(systemName: "plus").foregroundColor(brandColor) }
                 }
             }
-            .sheet(isPresented: $showingAddGoalSheet) {
-                AddGoalView()
-            }
+            .sheet(isPresented: $showingAddGoalSheet) { AddGoalView() }
             .sheet(item: $selectedGoal) { goal in
                 VStack(spacing: 30) {
-                    Text("나의 성장 기록")
-                        .font(.title2).bold().padding(.top, 30)
+                    Text("나의 성장 기록").font(.title2).bold().padding(.top, 30)
                     Text(goal.title).font(.headline).foregroundColor(.gray)
                     CharacterView(userId: currentUserId).padding()
                     Spacer()
@@ -79,28 +55,16 @@ struct GoalListView: View {
             }
             .onAppear {
                 todayQuote = QuoteManager.getRandomQuote()
-                
-                // 화면 뜰 때 닉네임 최신화 (혹시 모르니 한번 더 호출)
-                if let uid = Auth.auth().currentUser?.uid {
-                    authManager.fetchUserNickname(uid: uid)
-                }
+                if let uid = Auth.auth().currentUser?.uid { authManager.fetchUserNickname(uid: uid) }
             }
         }
     }
-    
     @Environment(\.modelContext) private var modelContext
-    private func deleteGoals(offsets: IndexSet) {
-        for index in offsets {
-            modelContext.delete(goals[index])
-        }
-    }
+    private func deleteGoals(offsets: IndexSet) { for index in offsets { modelContext.delete(goals[index]) } }
 }
 
-// ... (하단 QuoteCard, GoalRow는 기존 코드와 동일합니다. 변경 없음)
-// 위 코드 복사 시 하단 QuoteCard, GoalRow 부분까지 포함해서 덮어쓰기 하셔도 됩니다.
-// 만약 이전 칠판 스타일 코드를 유지하고 싶으시다면, GoalListView 구조체만 교체하시면 됩니다.
-// 편의를 위해 전체 코드를 다시 드립니다.
-
+// ---------------------------------------------------------
+// ✨ 하위 뷰 1: 명언 카드 (칠판 디테일 추가됨 🖍️)
 struct QuoteCard: View {
     let quote: Quote
     @State private var displayedText: String = ""
@@ -128,6 +92,24 @@ struct QuoteCard: View {
                     .foregroundColor(.white.opacity(0.8))
                     .padding(.top, 5)
             }
+            
+            // ✨ 칠판 하단 분필 & 지우개 표현
+            HStack(spacing: 15) {
+                Spacer()
+                // 분필
+                RoundedRectangle(cornerRadius: 2)
+                    .fill(Color.white.opacity(0.9))
+                    .frame(width: 40, height: 8)
+                    .rotationEffect(.degrees(-5)) // 살짝 기울이기
+                
+                // 지우개
+                VStack(spacing: 0) {
+                    Rectangle().fill(woodBrown).frame(width: 35, height: 8) // 손잡이
+                    Rectangle().fill(Color.gray).frame(width: 35, height: 12) // 스펀지
+                }
+                .cornerRadius(3)
+            }
+            .padding(.top, 15) // 명언과 간격 띄우기
         }
         .padding(20).background(chalkboardGreen)
         .overlay(RoundedRectangle(cornerRadius: 15).stroke(woodBrown, lineWidth: 6))
@@ -147,6 +129,7 @@ struct QuoteCard: View {
     }
 }
 
+// ... (GoalRow는 기존과 동일)
 struct GoalRow: View {
     let goal: Goal
     let userId: String
