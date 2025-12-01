@@ -28,12 +28,12 @@ struct TimerView: View {
     
     var body: some View {
         NavigationStack {
-            VStack(spacing: 20) {
+            VStack(spacing: 30) {
                 
-                // 1. 상단 여백 (제목과 내용 사이 거리 대폭 확보)
+                // 1. 상단 여백
                 Spacer().frame(height: 50)
                 
-                // 2. 과목 선택 영역
+                // 2. 과목 선택 영역 (수정됨 ✨)
                 VStack(spacing: 15) {
                     Text("지금 공부할 과목")
                         .font(.subheadline)
@@ -48,28 +48,29 @@ struct TimerView: View {
                     } label: {
                         HStack {
                             Text(selectedSubject)
-                                .font(.title3)
+                                .font(.title3) // 폰트 크기 키움
                                 .fontWeight(.semibold)
+                            
                             Image(systemName: "chevron.down")
                                 .font(.caption)
+                                .fontWeight(.bold)
                         }
                         .foregroundColor(brandColor)
                         .padding(.vertical, 12)
-                        .padding(.horizontal, 25)
-                        .background(Color.blue.opacity(0.1))
-                        .cornerRadius(25)
-                        // 여기는 frame(width:)를 뺐으므로 글자 길이에 맞춰 자연스럽게 늘어납니다.
+                        .padding(.horizontal, 25) // 좌우 여백 적당히
+                        .background(Color.blue.opacity(0.1)) // 배경색
+                        .clipShape(Capsule()) // 알약 모양으로 둥글게
                     }
                 }
                 
-                Spacer() // 중앙 정렬을 위한 Spacer
+                Spacer()
                 
-                // 3. 타이머 시간 표시 (크기 90으로 확대)
+                // 3. 타이머 시간 표시
                 Text(formatTime(seconds: timeElapsed))
-                    .font(.system(size: 90, weight: .black, design: .monospaced)) // Bold보다 더 굵은 Black 사용
+                    .font(.system(size: 90, weight: .medium, design: .monospaced))
                     .foregroundColor(.primary)
-                    .lineLimit(1) // 한 줄 넘김 방지
-                    .minimumScaleFactor(0.5) // 화면이 좁으면 자동으로 글자 축소 (깨짐 방지)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.5)
                     .padding(.horizontal)
                 
                 Spacer()
@@ -118,7 +119,7 @@ struct TimerView: View {
                 }
                 .padding(.bottom, 20)
                 
-                // 5. 최근 기록 뷰
+                // 5. 최근 기록 뷰 (삭제 기능 유지)
                 RecentRecordsView(userId: currentUserId)
                     .padding(.bottom, 10)
             }
@@ -171,6 +172,7 @@ struct TimerView: View {
 }
 
 struct RecentRecordsView: View {
+    @Environment(\.modelContext) private var modelContext
     @Query private var records: [StudyRecord]
     
     init(userId: String) {
@@ -187,7 +189,7 @@ struct RecentRecordsView: View {
                 .padding(.bottom, 5)
             
             List {
-                ForEach(records.prefix(3)) { record in // 공간 확보를 위해 최근 3개만 표시
+                ForEach(records) { record in
                     HStack {
                         Text(record.areaName)
                             .font(.subheadline)
@@ -204,9 +206,16 @@ struct RecentRecordsView: View {
                         }
                     }
                 }
+                .onDelete(perform: deleteRecords)
             }
             .listStyle(.plain)
-            .frame(height: 150) // 높이 살짝 줄임
+            .frame(height: 200)
+        }
+    }
+    
+    private func deleteRecords(offsets: IndexSet) {
+        for index in offsets {
+            modelContext.delete(records[index])
         }
     }
 }

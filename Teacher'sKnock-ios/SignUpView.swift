@@ -56,7 +56,7 @@ struct SignUpView: View {
                             Text("닉네임")
                                 .font(.caption).foregroundColor(.gray).padding(.leading, 5)
                             
-                            TextField("앱에서 사용할 이름 (예: 열공이)", text: $nickname)
+                            TextField("앱에서 사용할 이름 (예: 합격이)", text: $nickname)
                                 .padding()
                                 .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.gray.opacity(0.4), lineWidth: 1))
                                 .autocapitalization(.none)
@@ -144,7 +144,7 @@ struct SignUpView: View {
                                 .padding(.horizontal, 30).padding(.top, 10)
                                 
                                 Button(action: finalizeSignup) {
-                                    Text("합격의 문 두드리기")
+                                    Text("Teacher's Knock와 합격으로")
                                         .frame(maxWidth: .infinity).padding()
                                         .background(isAgreed ? brandColor : Color.gray)
                                         .foregroundColor(.white).font(.headline).cornerRadius(8)

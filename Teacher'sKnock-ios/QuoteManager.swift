@@ -10,16 +10,65 @@ struct Quote {
 struct QuoteManager {
     // 임용고시생/교대생을 위한 응원 명언 리스트
     static let quotes: [Quote] = [
-        Quote(text: "교육은 세상을 바꿀 수 있는 가장 강력한 무기다.", author: "넬슨 만델라"),
-        Quote(text: "아이들을 가르치는 것은 그들의 미래를 만지는 것이다.", author: "헨리 아담스"),
-        Quote(text: "좋은 선생님은 촛불과 같다. 스스로를 태워 다른 사람의 길을 밝힌다.", author: "무스타파 케말 아타튀르크"),
-        Quote(text: "꿈을 꿀 수 있다면, 그 꿈을 이룰 수도 있다.", author: "월트 디즈니"),
-        Quote(text: "멈추지 않는 이상, 얼마나 천천히 가는지는 중요하지 않다.", author: "공자"),
-        Quote(text: "오늘 걷지 않으면 내일은 뛰어야 한다.", author: "카를레스 푸욜"),
-        Quote(text: "성공의 비결은 시작하는 것이다.", author: "마크 트웨인"),
-        Quote(text: "노력은 배신하지 않는다. 다만 시간이 걸릴 뿐이다.", author: "미상"),
-        Quote(text: "최고의 복수는 엄청난 성공이다.", author: "프랭크 시나트라"),
-        Quote(text: "당신이 포기하고 싶을 때, 당신이 왜 시작했는지를 기억하라.", author: "미상")
+        // 🌟 교육 & 교사의 길
+                Quote(text: "교육은 세상을 바꿀 수 있는 가장 강력한 무기다.", author: "넬슨 만델라"),
+                Quote(text: "아이들을 가르치는 것은 그들의 미래를 만지는 것이다.", author: "헨리 아담스"),
+                Quote(text: "좋은 선생님은 촛불과 같다. 스스로를 태워 다른 사람의 길을 밝힌다.", author: "무스타파 케말 아타튀르크"),
+                Quote(text: "교육은 양동이를 채우는 것이 아니라 불을 지피는 것이다.", author: "W.B. 예이츠"),
+                Quote(text: "평범한 교사는 말을 하고, 훌륭한 교사는 설명하며, 위대한 교사는 감동을 준다.", author: "윌리엄 A. 워드"),
+                Quote(text: "가르친다는 것은 두 번 배우는 것이다.", author: "조셉 주베르"),
+                Quote(text: "교사의 수준이 교육의 질을 결정합니다. 당신은 이미 훌륭합니다.", author: "교육학 격언"),
+                Quote(text: "교육이란 알지 못하는 바를 알도록 가르치는 것이 아니라, 행동하지 않는 바를 행동하도록 가르치는 것이다.", author: "마크 트웨인"),
+                Quote(text: "아이 하나를 키우려면 온 마을이 필요하다.", author: "아프리카 속담"),
+                Quote(text: "교사는 영원한 학생이어야 한다.", author: "교육학자"),
+                
+                // 💪 노력 & 끈기
+                Quote(text: "성공의 비결은 시작하는 것이다.", author: "마크 트웨인"),
+                Quote(text: "노력은 배신하지 않는다. 다만 시간이 걸릴 뿐이다.", author: "미상"),
+                Quote(text: "오늘 걷지 않으면 내일은 뛰어야 한다.", author: "카를레스 푸욜"),
+                Quote(text: "최고의 복수는 엄청난 성공이다.", author: "프랭크 시나트라"),
+                Quote(text: "멈추지 않는 이상, 얼마나 천천히 가는지는 중요하지 않다.", author: "공자"),
+                Quote(text: "꿈을 꿀 수 있다면, 그 꿈을 이룰 수도 있다.", author: "월트 디즈니"),
+                Quote(text: "포기하지 않는 한 실패는 없다.", author: "아리스토텔레스"),
+                Quote(text: "천재는 1%의 영감과 99%의 땀으로 이루어진다.", author: "토마스 에디슨"),
+                Quote(text: "고통 없이는 얻는 것도 없다.", author: "벤자민 프랭클린"),
+                Quote(text: "승리는 가장 끈기 있는 자에게 돌아간다.", author: "나폴레옹 보나파르트"),
+                
+                // 🏫 Tino 오리지널 (임용고시생 맞춤 응원)
+                Quote(text: "당신의 교실에서 꿈을 꿀 아이들을 생각하며 오늘을 견디세요.", author: "Tino"),
+                Quote(text: "지금 흘리는 땀방울이 미래의 아이들에게 시원한 그늘이 됩니다.", author: "Tino"),
+                Quote(text: "합격은 끝이 아니라, 위대한 선생님이 되기 위한 시작입니다.", author: "Tino"),
+                Quote(text: "당신이 만날 3월의 교실은, 당신의 노력만큼 빛날 것입니다.", author: "Tino"),
+                Quote(text: "수업 실연하듯, 오늘 하루도 자신감 있게!", author: "Tino 응원"),
+                Quote(text: "불안해하지 마세요. 당신의 노력은 차곡차곡 쌓이고 있습니다.", author: "Tino"),
+                Quote(text: "교단에 서는 그날, 오늘의 고생은 추억이 될 거예요.", author: "Tino"),
+                Quote(text: "선생님, 아이들이 기다리고 있어요. 조금만 더 힘내요!", author: "Tino"),
+                Quote(text: "당신의 따뜻한 눈빛이 아이들의 세상을 바꿀 거예요.", author: "Tino"),
+                Quote(text: "오늘 하루도 미래의 제자들을 위해 파이팅!", author: "Tino"),
+                
+                // 🌅 희망 & 긍정
+                Quote(text: "가장 어두운 밤도 끝내 해는 뜬다.", author: "빅토르 위고"),
+                Quote(text: "내일은 우리가 어제로부터 무엇인가 배웠기를 바란다.", author: "존 웨인"),
+                Quote(text: "당신이 할 수 있다고 믿든, 할 수 없다고 믿든, 믿는 대로 될 것이다.", author: "헨리 포드"),
+                Quote(text: "실패는 성공을 향한 디딤돌이다.", author: "작자 미상"),
+                Quote(text: "인생에서 가장 큰 영광은 넘어지지 않는 것이 아니라, 넘어질 때마다 일어나는 것이다.", author: "넬슨 만델라"),
+                Quote(text: "기적은 노력의 또 다른 이름이다.", author: "강철의 연금술사"),
+                Quote(text: "시작이 반이다.", author: "아리스토텔레스"),
+                Quote(text: "당신의 잠재력은 당신이 생각하는 것보다 훨씬 크다.", author: "미상"),
+                Quote(text: "오늘을 사랑하라. 어제는 이미 지났고 내일은 아직 오지 않았다.", author: "롱펠로우"),
+                Quote(text: "행복은 목적지가 아니라 여정이다.", author: "소크라테스"),
+                
+                // 📚 공부 자극
+                Quote(text: "공부할 때의 고통은 잠깐이지만, 못 배운 고통은 평생이다.", author: "하버드 도서관"),
+                Quote(text: "지금 잠을 자면 꿈을 꾸지만, 지금 공부하면 꿈을 이룬다.", author: "하버드 도서관"),
+                Quote(text: "내가 헛되이 보낸 오늘은 어제 죽은 이가 그토록 갈망하던 내일이다.", author: "소포클레스"),
+                Quote(text: "늦었다고 생각할 때가 가장 빠른 때이다.", author: "명언"),
+                Quote(text: "오늘 걷지 않으면 내일 뛰어야 한다.", author: "명언"),
+                Quote(text: "공부는 시간이 부족해서 못 하는 것이 아니라 노력이 부족해서 못 하는 것이다.", author: "명언"),
+                Quote(text: "행복은 성적순이 아니지만, 성공은 성적순일 수 있다.", author: "명언"),
+                Quote(text: "피할 수 없으면 즐겨라.", author: "로버트 엘리엇"),
+                Quote(text: "남보다 더 일찍 부지런히 노력하는 사람이 성공을 맛본다.", author: "헨리 8세"),
+                Quote(text: "불가능이란 노력하지 않는 자의 변명이다.", author: "김연아")
     ]
     
     // 랜덤으로 명언 하나를 반환하는 함수
