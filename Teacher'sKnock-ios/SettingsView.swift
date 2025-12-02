@@ -4,17 +4,28 @@ import FirebaseFirestore
 
 struct SettingsView: View {
     @EnvironmentObject var authManager: AuthManager
+    @EnvironmentObject var settingsManager: SettingsManager
     
-    // 알림창 상태 관리
     @State private var showLogoutAlert = false
     @State private var showDeleteAlert = false
+    @State private var showAlert = false
     @State private var alertMessage = ""
-    @State private var showAlert = false // 일반 오류 메시지용
     
     var body: some View {
         NavigationStack {
             List {
-                // 섹션 1: 계정 정보
+                Section(header: Text("학습 설정")) {
+                    NavigationLink(destination: SubjectSelectView()) {
+                        HStack {
+                            Text("선호 과목 설정")
+                            Spacer()
+                            Text("\(settingsManager.favoriteSubjects.count)개 선택됨")
+                                .font(.caption)
+                                .foregroundColor(.gray)
+                        }
+                    }
+                }
+                
                 Section(header: Text("계정")) {
                     if let user = Auth.auth().currentUser {
                         HStack {
@@ -26,7 +37,6 @@ struct SettingsView: View {
                     }
                 }
                 
-                // 섹션 2: 로그아웃
                 Section {
                     Button("로그아웃") {
                         showLogoutAlert = true
@@ -42,16 +52,15 @@ struct SettingsView: View {
                     Text("정말 로그아웃 하시겠습니까?")
                 }
                 
-                // 섹션 3: 회원 탈퇴 (심사 필수!)
                 Section {
                     Button("회원 탈퇴") {
                         showDeleteAlert = true
                     }
                     .foregroundColor(.red)
                 } header: {
-                    Text("Teacher's Knock 회원 탈퇴")
+                    Text("위험 구역")
                 } footer: {
-                    Text("탈퇴 시 모든 데이터(목표, 일정, 기록)가 영구적으로 삭제됩니다.")
+                    Text("탈퇴 시 모든 데이터가 영구적으로 삭제됩니다.")
                 }
                 .alert("회원 탈퇴", isPresented: $showDeleteAlert) {
                     Button("취소", role: .cancel) { }
@@ -71,40 +80,36 @@ struct SettingsView: View {
         }
     }
     
-    // 로그아웃 함수
+    // ✨ 로그아웃 함수 수정
     func logout() {
         do {
             try Auth.auth().signOut()
             authManager.isLoggedIn = false
+            settingsManager.reset() // 명시적 초기화
         } catch let error {
             print("로그아웃 실패: \(error.localizedDescription)")
         }
     }
     
-    // ✨ 회원 탈퇴 함수 (Firestore 데이터 + 계정 삭제)
+    // ✨ 회원 탈퇴 함수 수정
     func deleteAccount() {
         guard let user = Auth.auth().currentUser else { return }
         let uid = user.uid
         let db = Firestore.firestore()
         
-        // 1. Firestore 유저 데이터 삭제
         db.collection("users").document(uid).delete { error in
             if let error = error {
                 alertMessage = "데이터 삭제 실패: \(error.localizedDescription)"
                 showAlert = true
                 return
             }
-            
-            // 2. Firebase Authentication 계정 삭제
             user.delete { error in
                 if let error = error {
-                    // 로그인한 지 오래되면 재인증이 필요할 수 있음 (보안 정책)
-                    alertMessage = "계정 삭제 실패: 로그아웃 후 다시 로그인해서 시도해주세요.\n(\(error.localizedDescription))"
+                    alertMessage = "계정 삭제 실패: 재로그인 후 시도해주세요."
                     showAlert = true
                 } else {
-                    // 3. 성공 시 로그아웃 처리
-                    print("회원 탈퇴 완료")
                     authManager.isLoggedIn = false
+                    settingsManager.reset() // 명시적 초기화
                 }
             }
         }
@@ -114,4 +119,5 @@ struct SettingsView: View {
 #Preview {
     SettingsView()
         .environmentObject(AuthManager())
+        .environmentObject(SettingsManager())
 }

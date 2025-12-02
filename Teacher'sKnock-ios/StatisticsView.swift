@@ -3,13 +3,16 @@ import SwiftData
 import Charts
 
 struct StatisticsView: View {
-    // 저장된 공부 기록 불러오기
     @Query private var records: [StudyRecord]
+    
+    // ✨ 상세 화면 전달용 ID 저장
+    let userId: String
     
     private let brandColor = Color(red: 0.35, green: 0.65, blue: 0.95)
     
-    // 생성자: 내 ID에 해당하는 공부 기록만 필터링
+    // 생성자
     init(userId: String) {
+        self.userId = userId
         _records = Query(filter: #Predicate<StudyRecord> { record in
             record.ownerID == userId
         }, sort: \.date, order: .reverse)
@@ -21,7 +24,6 @@ struct StatisticsView: View {
         let totalSeconds: Int
     }
     
-    // 차트 데이터 계산
     var chartData: [SubjectData] {
         var dict: [String: Int] = [:]
         for record in records {
@@ -31,12 +33,10 @@ struct StatisticsView: View {
                    .sorted { $0.totalSeconds > $1.totalSeconds }
     }
     
-    // 전체 총 공부 시간 (초 단위)
     var totalSecondsAll: Int {
         records.reduce(0) { $0 + $1.durationSeconds }
     }
     
-    // 표시용 문자열
     var totalStudyTimeString: String {
         let h = totalSecondsAll / 3600
         let m = (totalSecondsAll % 3600) / 60
@@ -48,7 +48,7 @@ struct StatisticsView: View {
             ScrollView {
                 VStack(spacing: 30) {
                     
-                    // 1. 총 공부 시간 요약 카드
+                    // 1. 총 공부 시간 요약
                     VStack {
                         Text("총 누적 공부 시간")
                             .font(.headline)
@@ -73,9 +73,7 @@ struct StatisticsView: View {
                                 .padding(.leading)
                                 .padding(.top)
                             
-                            // ✨ 차트 영역
                             Chart(chartData) { item in
-                                // 퍼센트 계산
                                 let percentage = Double(item.totalSeconds) / Double(totalSecondsAll) * 100
                                 
                                 SectorMark(
@@ -85,14 +83,13 @@ struct StatisticsView: View {
                                 )
                                 .cornerRadius(5)
                                 .foregroundStyle(by: .value("과목", item.subject))
-                                // ✨ 퍼센트 텍스트 (크기 확대 및 그림자 강화)
                                 .annotation(position: .overlay) {
-                                    if percentage >= 5 { // 5% 이상일 때만 표시
+                                    if percentage >= 5 {
                                         Text(String(format: "%.0f%%", percentage))
-                                            .font(.headline) // caption -> headline으로 키움
-                                            .fontWeight(.heavy) // 굵기도 더 굵게
+                                            .font(.headline)
+                                            .fontWeight(.heavy)
                                             .foregroundColor(.white)
-                                            .shadow(color: .black.opacity(0.4), radius: 2, x: 1, y: 1) // 그림자 진하게
+                                            .shadow(color: .black.opacity(0.4), radius: 2, x: 1, y: 1)
                                     }
                                 }
                             }
@@ -104,27 +101,36 @@ struct StatisticsView: View {
                         .shadow(color: .gray.opacity(0.1), radius: 5)
                         .padding(.horizontal)
                         
-                        // 3. 상세 리스트
-                        VStack(alignment: .leading, spacing: 15) {
+                        // 3. 상세 리스트 (클릭 가능하도록 수정됨 ✨)
+                        VStack(alignment: .leading, spacing: 0) {
                             Text("과목별 상세 기록")
                                 .font(.headline)
-                                .padding(.leading)
-                                .padding(.top)
+                                .padding()
                             
                             ForEach(chartData) { item in
-                                HStack {
-                                    Text(item.subject)
-                                        .bold()
-                                    Spacer()
-                                    let h = item.totalSeconds / 3600
-                                    let m = (item.totalSeconds % 3600) / 60
-                                    Text("\(h)시간 \(m)분")
-                                        .foregroundColor(.gray)
+                                // ✨ 네비게이션 링크 추가
+                                NavigationLink(destination: SubjectDetailView(subjectName: item.subject, userId: userId)) {
+                                    HStack {
+                                        Text(item.subject)
+                                            .bold()
+                                            .foregroundColor(.primary)
+                                        Spacer()
+                                        
+                                        let h = item.totalSeconds / 3600
+                                        let m = (item.totalSeconds % 3600) / 60
+                                        Text("\(h)시간 \(m)분")
+                                            .foregroundColor(.gray)
+                                        
+                                        Image(systemName: "chevron.right")
+                                            .font(.caption)
+                                            .foregroundColor(.gray.opacity(0.5))
+                                            .padding(.leading, 5)
+                                    }
+                                    .padding()
+                                    .background(Color.white) // 터치 영역 확보
                                 }
-                                .padding(.horizontal)
                                 Divider()
                             }
-                            .padding(.bottom)
                         }
                         .background(Color.white)
                         .cornerRadius(15)
