@@ -5,25 +5,40 @@ import Charts
 struct StatisticsView: View {
     @Query private var records: [StudyRecord]
     
-    // ✨ 상세 화면 전달용 ID 저장
+    // 상세 화면 전달용 ID
     let userId: String
     
     private let brandColor = Color(red: 0.35, green: 0.65, blue: 0.95)
     
-    // 생성자
     init(userId: String) {
         self.userId = userId
+        // 내 데이터만, 최신순 정렬
         _records = Query(filter: #Predicate<StudyRecord> { record in
             record.ownerID == userId
         }, sort: \.date, order: .reverse)
     }
     
+    // 데이터 구조체
     struct SubjectData: Identifiable {
         let id = UUID()
         let subject: String
         let totalSeconds: Int
     }
     
+    // ✨ 오늘 공부한 시간만 필터링 (오늘 공부량 확인용)
+    var todaySeconds: Int {
+        let calendar = Calendar.current
+        return records
+            .filter { calendar.isDateInToday($0.date) }
+            .reduce(0) { $0 + $1.durationSeconds }
+    }
+    
+    // 전체 누적 시간
+    var totalSecondsAll: Int {
+        records.reduce(0) { $0 + $1.durationSeconds }
+    }
+    
+    // 차트 데이터 (전체 기준)
     var chartData: [SubjectData] {
         var dict: [String: Int] = [:]
         for record in records {
@@ -33,43 +48,58 @@ struct StatisticsView: View {
                    .sorted { $0.totalSeconds > $1.totalSeconds }
     }
     
-    var totalSecondsAll: Int {
-        records.reduce(0) { $0 + $1.durationSeconds }
-    }
-    
-    var totalStudyTimeString: String {
-        let h = totalSecondsAll / 3600
-        let m = (totalSecondsAll % 3600) / 60
+    // 시간 포맷팅 함수 (분 단위까지만 표시)
+    func formatTime(seconds: Int) -> String {
+        let h = seconds / 3600
+        let m = (seconds % 3600) / 60
         return "\(h)시간 \(m)분"
     }
 
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(spacing: 30) {
+                VStack(spacing: 25) {
                     
-                    // 1. 총 공부 시간 요약
-                    VStack {
-                        Text("총 누적 공부 시간")
-                            .font(.headline)
-                            .foregroundColor(.gray)
-                        Text(totalStudyTimeString)
-                            .font(.system(size: 40, weight: .bold, design: .rounded))
-                            .foregroundColor(brandColor)
+                    // 1. ✨ 시간 요약 카드 (오늘 vs 전체)
+                    HStack(spacing: 15) {
+                        // 오늘 공부 시간 (강조)
+                        VStack(spacing: 5) {
+                            Text("오늘 공부")
+                                .font(.caption)
+                                .foregroundColor(.gray)
+                            Text(formatTime(seconds: todaySeconds))
+                                .font(.system(size: 24, weight: .bold, design: .rounded))
+                                .foregroundColor(brandColor)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 20)
+                        .background(Color.white)
+                        .cornerRadius(15)
+                        .shadow(color: .gray.opacity(0.1), radius: 5)
+                        
+                        // 전체 누적 시간
+                        VStack(spacing: 5) {
+                            Text("총 누적")
+                                .font(.caption)
+                                .foregroundColor(.gray)
+                            Text(formatTime(seconds: totalSecondsAll))
+                                .font(.system(size: 24, weight: .bold, design: .rounded))
+                                .foregroundColor(.primary)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 20)
+                        .background(Color.white)
+                        .cornerRadius(15)
+                        .shadow(color: .gray.opacity(0.1), radius: 5)
                     }
-                    .frame(maxWidth: .infinity)
-                    .padding()
-                    .background(Color.white)
-                    .cornerRadius(15)
-                    .shadow(color: .gray.opacity(0.1), radius: 5)
                     .padding(.horizontal)
+                    .padding(.top)
                     
                     // 2. 과목별 파이 차트
                     if !chartData.isEmpty {
                         VStack(alignment: .leading) {
-                            Text("과목별 비중")
-                                .font(.title2)
-                                .bold()
+                            Text("과목별 공부 비중 (전체)")
+                                .font(.headline)
                                 .padding(.leading)
                                 .padding(.top)
                             
@@ -86,14 +116,14 @@ struct StatisticsView: View {
                                 .annotation(position: .overlay) {
                                     if percentage >= 5 {
                                         Text(String(format: "%.0f%%", percentage))
-                                            .font(.headline)
-                                            .fontWeight(.heavy)
+                                            .font(.caption)
+                                            .fontWeight(.bold)
                                             .foregroundColor(.white)
-                                            .shadow(color: .black.opacity(0.4), radius: 2, x: 1, y: 1)
+                                            .shadow(color: .black.opacity(0.4), radius: 1, x: 1, y: 1)
                                     }
                                 }
                             }
-                            .frame(height: 300)
+                            .frame(height: 250)
                             .padding()
                         }
                         .background(Color.white)
@@ -101,14 +131,14 @@ struct StatisticsView: View {
                         .shadow(color: .gray.opacity(0.1), radius: 5)
                         .padding(.horizontal)
                         
-                        // 3. 상세 리스트 (클릭 가능하도록 수정됨 ✨)
+                        // 3. 상세 리스트
                         VStack(alignment: .leading, spacing: 0) {
                             Text("과목별 상세 기록")
                                 .font(.headline)
                                 .padding()
                             
                             ForEach(chartData) { item in
-                                // ✨ 네비게이션 링크 추가
+                                // 기존에 있는 SubjectDetailView로 연결 (이제 충돌 없음!)
                                 NavigationLink(destination: SubjectDetailView(subjectName: item.subject, userId: userId)) {
                                     HStack {
                                         Text(item.subject)
@@ -116,9 +146,7 @@ struct StatisticsView: View {
                                             .foregroundColor(.primary)
                                         Spacer()
                                         
-                                        let h = item.totalSeconds / 3600
-                                        let m = (item.totalSeconds % 3600) / 60
-                                        Text("\(h)시간 \(m)분")
+                                        Text(formatTime(seconds: item.totalSeconds))
                                             .foregroundColor(.gray)
                                         
                                         Image(systemName: "chevron.right")
@@ -127,7 +155,7 @@ struct StatisticsView: View {
                                             .padding(.leading, 5)
                                     }
                                     .padding()
-                                    .background(Color.white) // 터치 영역 확보
+                                    .background(Color.white)
                                 }
                                 Divider()
                             }
@@ -136,18 +164,20 @@ struct StatisticsView: View {
                         .cornerRadius(15)
                         .shadow(color: .gray.opacity(0.1), radius: 5)
                         .padding(.horizontal)
+                        .padding(.bottom, 30)
                         
                     } else {
-                        // 데이터 없음
+                        // 데이터 없을 때 (Empty State)
                         VStack(spacing: 20) {
+                            Spacer().frame(height: 20)
                             Image(systemName: "chart.pie.fill")
-                                .font(.system(size: 50))
-                                .foregroundColor(.gray.opacity(0.3))
-                            Text("아직 공부 기록이 없습니다.\n타이머를 실행해서 기록을 쌓아보세요!")
+                                .font(.system(size: 60))
+                                .foregroundColor(.gray.opacity(0.2))
+                            Text("아직 공부 기록이 없습니다.\n오늘의 첫 공부를 시작해보세요!")
                                 .multilineTextAlignment(.center)
                                 .foregroundColor(.gray)
+                                .padding(.bottom, 20)
                         }
-                        .frame(height: 300)
                         .frame(maxWidth: .infinity)
                         .background(Color.white)
                         .cornerRadius(15)
@@ -155,7 +185,6 @@ struct StatisticsView: View {
                         .padding(.horizontal)
                     }
                 }
-                .padding(.top)
             }
             .background(Color(.systemGray6))
             .navigationTitle("학습 통계")
@@ -164,5 +193,6 @@ struct StatisticsView: View {
 }
 
 #Preview {
-    StatisticsView(userId: "test_user")
+    StatisticsView(userId: "preview_user")
+        .modelContainer(for: StudyRecord.self, inMemory: true)
 }

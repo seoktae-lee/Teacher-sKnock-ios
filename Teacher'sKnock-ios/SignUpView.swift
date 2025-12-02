@@ -184,7 +184,7 @@ struct SignUpView: View {
                                 .padding(.horizontal, 30).padding(.top, 10)
                                 
                                 Button(action: finalizeSignup) {
-                                    Text("Teacher's Knock와 합격으로")
+                                    Text("Teacher's Knock와 시작하기")
                                         .frame(maxWidth: .infinity).padding()
                                         .background(isAgreed ? brandColor : Color.gray)
                                         .foregroundColor(.white).font(.headline).cornerRadius(8)
