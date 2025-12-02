@@ -52,7 +52,7 @@ struct SignUpView: View {
                         // --- 1. 이메일 & 닉네임 입력 섹션 ---
                         VStack(alignment: .leading, spacing: 5) {
                             
-                            // ✨ 닉네임 입력 필드 추가
+                            // ✨ 닉네임 입력 필드
                             Text("닉네임")
                                 .font(.caption).foregroundColor(.gray).padding(.leading, 5)
                             
@@ -91,9 +91,49 @@ struct SignUpView: View {
                                 .disabled(isEmailVerified || email.isEmpty || nickname.isEmpty)
                             }
                             
+                            // ✨ [수정된 부분] 스팸함 안내 디자인 적용
                             if isVerificationSent && !isEmailVerified {
-                                Text("📩 인증 메일이 발송되었습니다. 링크를 누른 후 잠시만 기다려주세요.")
-                                    .font(.caption).foregroundColor(.orange).padding(.leading, 5)
+                                VStack(alignment: .leading, spacing: 8) {
+                                    Text("📩 인증 메일이 발송되었습니다.")
+                                        .font(.subheadline)
+                                        .fontWeight(.semibold)
+                                        .foregroundColor(brandColor)
+                                        .padding(.leading, 2)
+                                    
+                                    // 💡 스팸함 확인 안내 박스
+                                    HStack(alignment: .top, spacing: 10) {
+                                        Image(systemName: "exclamationmark.bubble.fill")
+                                            .foregroundColor(.orange)
+                                            .font(.title3)
+                                            .padding(.top, 2)
+                                        
+                                        VStack(alignment: .leading, spacing: 3) {
+                                            Text("메일이 도착하지 않았나요?")
+                                                .font(.caption)
+                                                .fontWeight(.bold)
+                                                .foregroundColor(.black.opacity(0.8))
+                                            
+                                            Text("구글(Gmail)의 경우 보안 정책으로 인해\n스팸함으로 분류될 수 있습니다. 꼭 확인해주세요!")
+                                                .font(.caption)
+                                                .foregroundColor(.gray)
+                                                .lineSpacing(2)
+                                                .fixedSize(horizontal: false, vertical: true)
+                                        }
+                                    }
+                                    .padding(12)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                    .background(
+                                        RoundedRectangle(cornerRadius: 10)
+                                            .fill(Color.orange.opacity(0.08)) // 은은한 배경
+                                    )
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 10)
+                                            .stroke(Color.orange.opacity(0.2), lineWidth: 1) // 테두리
+                                    )
+                                }
+                                .padding(.top, 10)
+                                .transition(.opacity.combined(with: .move(edge: .top))) // 부드러운 등장 애니메이션
+                                
                             } else if isEmailVerified {
                                 Text("✅ 본인 인증이 완료되었습니다. 비밀번호를 설정해주세요.")
                                     .font(.caption).foregroundColor(.green).padding(.leading, 5)
@@ -165,8 +205,8 @@ struct SignUpView: View {
         .onDisappear { timer?.invalidate() }
     }
     
-    // ... (이하 로직 함수는 동일하나 saveUserData만 수정됨)
-    func sendVerificationEmail() { /* 기존 코드 */
+    // ... 로직 함수들 (기존과 동일)
+    func sendVerificationEmail() {
         let tempPassword = UUID().uuidString
         Auth.auth().createUser(withEmail: email, password: tempPassword) { result, error in
             if let error = error {
@@ -177,7 +217,10 @@ struct SignUpView: View {
                     if let error = error {
                         alertTitle = "오류"; alertMessage = "발송 실패: \(error.localizedDescription)"; showAlert = true
                     } else {
-                        alertTitle = "알림"; alertMessage = "본인인증 메일이 발송되었습니다.\n메일함을 확인해주세요."; showAlert = true
+                        // ✨ 알림 메시지에도 스팸함 확인 문구 추가
+                        alertTitle = "알림"
+                        alertMessage = "인증 메일이 발송되었습니다.\n(메일이 안 보이면 스팸함을 꼭 확인해주세요!)"
+                        showAlert = true
                         withAnimation { isVerificationSent = true }
                         startVerificationTimer()
                     }
@@ -186,7 +229,7 @@ struct SignUpView: View {
         }
     }
     
-    func startVerificationTimer() { /* 기존 코드 */
+    func startVerificationTimer() {
         timer = Timer.scheduledTimer(withTimeInterval: 2.0, repeats: true) { _ in
             Auth.auth().currentUser?.reload(completion: { error in
                 if error == nil {
@@ -199,7 +242,7 @@ struct SignUpView: View {
         }
     }
     
-    func finalizeSignup() { /* 기존 코드 */
+    func finalizeSignup() {
         guard password.count >= 6 else {
             alertTitle="알림"; alertMessage="비밀번호는 6자리 이상이어야 합니다."; showAlert=true; return
         }
@@ -221,13 +264,12 @@ struct SignUpView: View {
         }
     }
     
-    // ✨ 수정됨: 닉네임 저장 추가
     func saveUserData(uid: String) {
         let db = Firestore.firestore()
         let userData: [String: Any] = [
             "uid": uid,
             "email": email,
-            "nickname": nickname, // ✨ 닉네임 저장
+            "nickname": nickname,
             "university": selectedUniversity,
             "joinDate": Timestamp(date: Date())
         ]
@@ -243,7 +285,7 @@ struct SignUpView: View {
     }
     
     @ViewBuilder
-    func secureInputField(title: String, text: Binding<String>) -> some View { /* 기존 코드 */
+    func secureInputField(title: String, text: Binding<String>) -> some View {
         VStack(alignment: .leading, spacing: 5) {
             SecureField(title, text: text)
                 .padding()
