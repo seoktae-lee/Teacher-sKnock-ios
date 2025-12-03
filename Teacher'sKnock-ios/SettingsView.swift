@@ -1,116 +1,138 @@
 import SwiftUI
 import FirebaseAuth
-import FirebaseFirestore
+import SwiftData // ✨ 데이터 삭제를 위해 필요
 
 struct SettingsView: View {
     @EnvironmentObject var authManager: AuthManager
     @EnvironmentObject var settingsManager: SettingsManager
+    // ✨ 로컬 데이터 삭제를 위한 컨텍스트
+    @Environment(\.modelContext) private var modelContext
     
-    @State private var showLogoutAlert = false
+    // 탈퇴 경고창 상태
     @State private var showDeleteAlert = false
-    @State private var showAlert = false
-    @State private var alertMessage = ""
+    @State private var errorMessage = ""
+    @State private var showErrorAlert = false
+    
+    let appVersion = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0"
     
     var body: some View {
         NavigationStack {
             List {
+                // 1. 프로필 섹션
+                Section {
+                    HStack(spacing: 15) {
+                        Image(systemName: "person.circle.fill")
+                            .resizable()
+                            .frame(width: 50, height: 50)
+                            .foregroundColor(.gray.opacity(0.5))
+                        
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(authManager.userNickname)
+                                .font(.headline)
+                            if let email = Auth.auth().currentUser?.email {
+                                Text(email)
+                                    .font(.caption)
+                                    .foregroundColor(.gray)
+                            }
+                        }
+                    }
+                    .padding(.vertical, 8)
+                }
+                
+                // 2. 학습 설정 섹션
                 Section(header: Text("학습 설정")) {
                     NavigationLink(destination: SubjectSelectView()) {
                         HStack {
+                            Image(systemName: "book.closed.fill")
+                                .foregroundColor(.blue)
                             Text("선호 과목 설정")
-                            Spacer()
-                            Text("\(settingsManager.favoriteSubjects.count)개 선택됨")
-                                .font(.caption)
-                                .foregroundColor(.gray)
                         }
                     }
-                }
-                
-                Section(header: Text("계정")) {
-                    if let user = Auth.auth().currentUser {
+                    
+                    NavigationLink(destination: Text("준비 중인 기능입니다.")) {
                         HStack {
-                            Text("이메일")
-                            Spacer()
-                            Text(user.email ?? "알 수 없음")
-                                .foregroundColor(.gray)
+                            Image(systemName: "target")
+                                .foregroundColor(.red)
+                            Text("디데이/목표 관리")
                         }
                     }
                 }
                 
-                Section {
-                    Button("로그아웃") {
-                        showLogoutAlert = true
+                // 3. 앱 정보 섹션
+                Section(header: Text("앱 정보")) {
+                    HStack {
+                        Text("버전")
+                        Spacer()
+                        Text(appVersion).foregroundColor(.gray)
                     }
-                    .foregroundColor(.blue)
-                }
-                .alert("로그아웃", isPresented: $showLogoutAlert) {
-                    Button("취소", role: .cancel) { }
-                    Button("로그아웃", role: .destructive) {
-                        logout()
+                    
+                    Link(destination: URL(string: "https://www.google.com")!) {
+                        Text("이용약관")
                     }
-                } message: {
-                    Text("정말 로그아웃 하시겠습니까?")
+                    Link(destination: URL(string: "https://www.google.com")!) {
+                        Text("개인정보 처리방침")
+                    }
                 }
                 
+                // 4. 계정 관리 섹션
                 Section {
-                    Button("회원 탈퇴") {
+                    Button(action: signOut) {
+                        Text("로그아웃")
+                            .foregroundColor(.primary)
+                    }
+                    
+                    // ✨ 회원탈퇴 버튼 (빨간색)
+                    Button(role: .destructive, action: {
                         showDeleteAlert = true
+                    }) {
+                        Text("회원탈퇴")
+                            .foregroundColor(.red)
                     }
-                    .foregroundColor(.red)
-                } header: {
-                    Text("Teacher's Knock 회원 탈퇴")
-                } footer: {
-                    Text("탈퇴 시 모든 데이터가 영구적으로 삭제됩니다.")
-                }
-                .alert("회원 탈퇴", isPresented: $showDeleteAlert) {
-                    Button("취소", role: .cancel) { }
-                    Button("탈퇴하기", role: .destructive) {
-                        deleteAccount()
-                    }
-                } message: {
-                    Text("정말로 탈퇴하시겠습니까?\n이 작업은 되돌릴 수 없습니다.")
                 }
             }
             .navigationTitle("설정")
-            .alert("알림", isPresented: $showAlert) {
+            // ✨ 회원탈퇴 경고창
+            .alert("정말 탈퇴하시겠습니까?", isPresented: $showDeleteAlert) {
+                Button("취소", role: .cancel) { }
+                Button("탈퇴하기", role: .destructive) {
+                    performDeleteAccount()
+                }
+            } message: {
+                Text("탈퇴 시 귀하의 모든 학습 기록, 일정, 설정 정보가 즉시 영구 삭제되며 복구할 수 없습니다.")
+            }
+            // 에러 발생 시 알림
+            .alert("오류 발생", isPresented: $showErrorAlert) {
                 Button("확인", role: .cancel) { }
             } message: {
-                Text(alertMessage)
+                Text(errorMessage)
             }
         }
     }
     
-    // ✨ 로그아웃 함수 수정
-    func logout() {
+    private func signOut() {
+        try? Auth.auth().signOut()
+    }
+    
+    // ✨ 실제 탈퇴 로직
+    private func performDeleteAccount() {
+        // 1. SwiftData(로컬 데이터) 전체 삭제
         do {
-            try Auth.auth().signOut()
-            authManager.isLoggedIn = false
-            settingsManager.reset() // 명시적 초기화
-        } catch let error {
-            print("로그아웃 실패: \(error.localizedDescription)")
+            try modelContext.delete(model: ScheduleItem.self)
+            try modelContext.delete(model: StudyRecord.self)
+            try modelContext.delete(model: Goal.self)
+            print("SettingsView: 로컬 데이터 삭제 완료")
+        } catch {
+            print("SettingsView: 로컬 데이터 삭제 실패 - \(error)")
         }
-    }
-    
-    // ✨ 회원 탈퇴 함수 수정
-    func deleteAccount() {
-        guard let user = Auth.auth().currentUser else { return }
-        let uid = user.uid
-        let db = Firestore.firestore()
         
-        db.collection("users").document(uid).delete { error in
-            if let error = error {
-                alertMessage = "데이터 삭제 실패: \(error.localizedDescription)"
-                showAlert = true
-                return
-            }
-            user.delete { error in
-                if let error = error {
-                    alertMessage = "계정 삭제 실패: 재로그인 후 시도해주세요."
-                    showAlert = true
-                } else {
-                    authManager.isLoggedIn = false
-                    settingsManager.reset() // 명시적 초기화
-                }
+        // 2. 서버 계정 삭제 요청
+        authManager.deleteAccount { success, error in
+            if !success {
+                errorMessage = error?.localizedDescription ?? "알 수 없는 오류가 발생했습니다."
+                showErrorAlert = true
+            } else {
+                // 성공하면 AuthManager가 자동으로 로그아웃 상태로 전환시킴
+                print("회원탈퇴 최종 완료")
             }
         }
     }
