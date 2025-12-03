@@ -2,12 +2,11 @@ import SwiftUI
 import SwiftData
 import Charts
 
-// ✨ [1] 겉포장지: 스와이프 기능을 담당하는 메인 뷰
+// [1] 겉포장지: 스와이프 기능을 담당하는 메인 뷰
 struct DailyDetailView: View {
     let userId: String
     let initialDate: Date
     
-    // 현재 보고 있는 페이지 번호 (0: 선택한 날짜, -1: 어제, +1: 내일)
     @State private var selectedIndex: Int = 0
     
     init(date: Date, userId: String) {
@@ -16,29 +15,24 @@ struct DailyDetailView: View {
     }
     
     var body: some View {
-        // ✨ TabView의 'Page' 스타일을 이용해 스와이프 구현
         TabView(selection: $selectedIndex) {
-            // 앞뒤로 넉넉하게 1년치(365일) 정도 범위를 생성
-            // (TabView는 Lazy하게 로딩하므로 성능 문제 없음)
             ForEach(-365...365, id: \.self) { offset in
                 let targetDate = Calendar.current.date(byAdding: .day, value: offset, to: initialDate) ?? initialDate
                 
-                // 실제 내용을 보여주는 뷰 호출
                 DailyReportContent(date: targetDate, userId: userId)
-                    .tag(offset) // 중요: 이 태그가 페이지 번호가 됨
+                    .tag(offset)
             }
         }
-        .tabViewStyle(.page(indexDisplayMode: .never)) // 페이지 점(인디케이터) 숨김
-        .background(Color(.systemGray6)) // 전체 배경색
+        .tabViewStyle(.page(indexDisplayMode: .never))
+        .background(Color(.systemGray6))
         .navigationBarTitleDisplayMode(.inline)
-        // 화면이 나타날 때 현재 페이지(0번)로 확실하게 맞춤
         .onAppear {
             selectedIndex = 0
         }
     }
 }
 
-// ✨ [2] 내용물: 실제 데이터와 통계를 보여주는 뷰 (기존 DailyDetailView 코드)
+// [2] 내용물: 실제 데이터와 통계를 보여주는 뷰
 struct DailyReportContent: View {
     let date: Date
     let userId: String
@@ -56,7 +50,6 @@ struct DailyReportContent: View {
         let startOfDay = calendar.startOfDay(for: date)
         let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay)!
         
-        // 해당 날짜 데이터 쿼리
         _schedules = Query(filter: #Predicate<ScheduleItem> { item in
             item.ownerID == userId && item.startDate >= startOfDay && item.startDate < endOfDay
         }, sort: \.startDate)
@@ -88,14 +81,23 @@ struct DailyReportContent: View {
         pieData.reduce(0) { $0 + $1.seconds }
     }
     
+    // ✨ [NEW] 날짜 포맷팅 헬퍼 함수
+    private func formatKoreanDate(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy년 M월 d일 (EEEE)" // 예: 2025년 12월 3일 (수요일)
+        formatter.locale = Locale(identifier: "ko_KR") // 한국어 강제 설정
+        return formatter.string(from: date)
+    }
+    
     var body: some View {
         ScrollView {
             VStack(spacing: 25) {
-                // 1. 날짜 헤더
+                // 1. ✨ [수정됨] 날짜 헤더 (한국어 포맷 적용)
                 HStack {
-                    Text(date.formatted(date: .complete, time: .omitted))
+                    Text(formatKoreanDate(date))
                         .font(.title2)
                         .bold()
+                        .foregroundColor(.primary)
                     Spacer()
                 }
                 .padding(.horizontal)
