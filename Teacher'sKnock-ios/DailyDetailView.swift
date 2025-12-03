@@ -2,14 +2,50 @@ import SwiftUI
 import SwiftData
 import Charts
 
+// ✨ [1] 겉포장지: 스와이프 기능을 담당하는 메인 뷰
 struct DailyDetailView: View {
+    let userId: String
+    let initialDate: Date
+    
+    // 현재 보고 있는 페이지 번호 (0: 선택한 날짜, -1: 어제, +1: 내일)
+    @State private var selectedIndex: Int = 0
+    
+    init(date: Date, userId: String) {
+        self.initialDate = date
+        self.userId = userId
+    }
+    
+    var body: some View {
+        // ✨ TabView의 'Page' 스타일을 이용해 스와이프 구현
+        TabView(selection: $selectedIndex) {
+            // 앞뒤로 넉넉하게 1년치(365일) 정도 범위를 생성
+            // (TabView는 Lazy하게 로딩하므로 성능 문제 없음)
+            ForEach(-365...365, id: \.self) { offset in
+                let targetDate = Calendar.current.date(byAdding: .day, value: offset, to: initialDate) ?? initialDate
+                
+                // 실제 내용을 보여주는 뷰 호출
+                DailyReportContent(date: targetDate, userId: userId)
+                    .tag(offset) // 중요: 이 태그가 페이지 번호가 됨
+            }
+        }
+        .tabViewStyle(.page(indexDisplayMode: .never)) // 페이지 점(인디케이터) 숨김
+        .background(Color(.systemGray6)) // 전체 배경색
+        .navigationBarTitleDisplayMode(.inline)
+        // 화면이 나타날 때 현재 페이지(0번)로 확실하게 맞춤
+        .onAppear {
+            selectedIndex = 0
+        }
+    }
+}
+
+// ✨ [2] 내용물: 실제 데이터와 통계를 보여주는 뷰 (기존 DailyDetailView 코드)
+struct DailyReportContent: View {
     let date: Date
     let userId: String
     
     @Query private var schedules: [ScheduleItem]
     @Query private var records: [StudyRecord]
     
-    // 타임라인 등에서 선택된 일정 (수정 시트용)
     @State private var selectedSchedule: ScheduleItem? = nil
     
     init(date: Date, userId: String) {
@@ -20,6 +56,7 @@ struct DailyDetailView: View {
         let startOfDay = calendar.startOfDay(for: date)
         let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay)!
         
+        // 해당 날짜 데이터 쿼리
         _schedules = Query(filter: #Predicate<ScheduleItem> { item in
             item.ownerID == userId && item.startDate >= startOfDay && item.startDate < endOfDay
         }, sort: \.startDate)
@@ -47,7 +84,6 @@ struct DailyDetailView: View {
         return dict.map { ChartData(subject: $0.key, seconds: $0.value) }
     }
     
-    // 퍼센트 계산을 위한 총 시간
     var totalSeconds: Int {
         pieData.reduce(0) { $0 + $1.seconds }
     }
@@ -65,10 +101,9 @@ struct DailyDetailView: View {
                 .padding(.horizontal)
                 .padding(.top)
                 
-                // 2. ✨ [순서 변경] To-Do List (가장 위로 이동)
+                // 2. To-Do List
                 HStack {
-                    Text("To-Do List")
-                        .font(.headline)
+                    Text("To-Do List").font(.headline)
                     Spacer()
                     Text("\(schedules.filter { $0.isCompleted }.count) / \(schedules.count) 완료")
                         .font(.caption)
@@ -108,7 +143,7 @@ struct DailyDetailView: View {
                             .padding()
                             .contentShape(Rectangle())
                             .onTapGesture {
-                                selectedSchedule = item // 리스트 눌러도 수정 가능
+                                selectedSchedule = item
                             }
                             Divider()
                         }
@@ -120,7 +155,7 @@ struct DailyDetailView: View {
                 
                 Divider()
                 
-                // 3. ✨ [순서 변경] 타임테이블 (중간)
+                // 3. 타임테이블
                 HStack {
                     Text("타임테이블").font(.headline)
                     Spacer()
@@ -133,20 +168,19 @@ struct DailyDetailView: View {
                 DailyTimelineView(schedules: schedules, onItemTap: { item in
                     selectedSchedule = item
                 })
-                .frame(height: 550) // 높이 충분히 확보 (스크롤 없음)
+                .frame(height: 550)
                 .background(Color.white)
                 .cornerRadius(15)
                 .padding(.horizontal)
                 
                 Divider()
                 
-                // 4. ✨ [순서 변경 & 퍼센트 추가] 오늘의 공부 통계 (맨 아래)
+                // 4. 오늘의 공부 통계
                 if !pieData.isEmpty {
                     VStack {
                         Text("과목별 학습 비중").font(.headline).padding(.top)
                         
                         Chart(pieData) { item in
-                            // 퍼센트 계산
                             let percentage = Double(item.seconds) / Double(totalSeconds) * 100
                             
                             SectorMark(
@@ -155,21 +189,19 @@ struct DailyDetailView: View {
                                 angularInset: 1.0
                             )
                             .foregroundStyle(item.color)
-                            // ✨ 차트 위에 퍼센트 글씨 올리기
                             .annotation(position: .overlay) {
-                                if percentage >= 5 { // 5% 이상일 때만 표시 (겹침 방지)
+                                if percentage >= 5 {
                                     Text(String(format: "%.0f%%", percentage))
                                         .font(.caption)
                                         .fontWeight(.bold)
                                         .foregroundColor(.white)
-                                        .shadow(color: .black.opacity(0.4), radius: 1, x: 0, y: 0) // 그림자로 가독성 확보
+                                        .shadow(color: .black.opacity(0.4), radius: 1, x: 0, y: 0)
                                 }
                             }
                         }
                         .frame(height: 250)
                         .padding()
                         
-                        // 범례
                         LazyVGrid(columns: [GridItem(.adaptive(minimum: 80))], spacing: 10) {
                             ForEach(pieData) { item in
                                 HStack(spacing: 4) {
@@ -189,8 +221,6 @@ struct DailyDetailView: View {
                 }
             }
         }
-        .background(Color(.systemGray6))
-        .navigationTitle("일일 리포트")
         .sheet(item: $selectedSchedule) { item in
             EditScheduleView(item: item)
         }
