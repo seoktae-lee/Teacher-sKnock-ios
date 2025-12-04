@@ -48,6 +48,9 @@
 		54F81CD42EE1B06C002226B4 /* DailyTimelineViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54F81CD32EE1B06C002226B4 /* DailyTimelineViewModel.swift */; };
 		54F81CD62EE1B383002226B4 /* AddScheduleViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54F81CD52EE1B383002226B4 /* AddScheduleViewModel.swift */; };
 		54F81CD82EE1CBBB002226B4 /* SchedulePreviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54F81CD72EE1CBBB002226B4 /* SchedulePreviewView.swift */; };
+		54F81CDA2EE1D13B002226B4 /* ReportListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54F81CD92EE1D13B002226B4 /* ReportListView.swift */; };
+		54F81CDC2EE1D47B002226B4 /* WeeklyReportDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54F81CDB2EE1D47B002226B4 /* WeeklyReportDetailView.swift */; };
+		54F81CDE2EE1D5C7002226B4 /* MonthlyReportDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54F81CDD2EE1D5C7002226B4 /* MonthlyReportDetailView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -90,6 +93,9 @@
 		54F81CD32EE1B06C002226B4 /* DailyTimelineViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DailyTimelineViewModel.swift; sourceTree = "<group>"; };
 		54F81CD52EE1B383002226B4 /* AddScheduleViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddScheduleViewModel.swift; sourceTree = "<group>"; };
 		54F81CD72EE1CBBB002226B4 /* SchedulePreviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SchedulePreviewView.swift; sourceTree = "<group>"; };
+		54F81CD92EE1D13B002226B4 /* ReportListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReportListView.swift; sourceTree = "<group>"; };
+		54F81CDB2EE1D47B002226B4 /* WeeklyReportDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeeklyReportDetailView.swift; sourceTree = "<group>"; };
+		54F81CDD2EE1D5C7002226B4 /* MonthlyReportDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MonthlyReportDetailView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -216,6 +222,9 @@
 				5459AE0D2EE19535008EE0E4 /* AddGoalView.swift */,
 				5459AE122EE19535008EE0E4 /* CharacterView.swift */,
 				5459AE5F2EE1A2BF008EE0E4 /* GoalViewModel.swift */,
+				54F81CD92EE1D13B002226B4 /* ReportListView.swift */,
+				54F81CDB2EE1D47B002226B4 /* WeeklyReportDetailView.swift */,
+				54F81CDD2EE1D5C7002226B4 /* MonthlyReportDetailView.swift */,
 			);
 			path = Home;
 			sourceTree = "<group>";
@@ -359,6 +368,7 @@
 				5459AE412EE19535008EE0E4 /* SignUpView.swift in Sources */,
 				5459AE422EE19535008EE0E4 /* SplashView.swift in Sources */,
 				5459AE432EE19535008EE0E4 /* StatisticsView.swift in Sources */,
+				54F81CDE2EE1D5C7002226B4 /* MonthlyReportDetailView.swift in Sources */,
 				5459AE442EE19535008EE0E4 /* StudyPurpose.swift in Sources */,
 				5459AE452EE19535008EE0E4 /* StudyRecord.swift in Sources */,
 				5459AE462EE19535008EE0E4 /* SubjectDetailView.swift in Sources */,
@@ -366,8 +376,10 @@
 				5459AE482EE19535008EE0E4 /* SubjectSelectView.swift in Sources */,
 				5459AE492EE19535008EE0E4 /* TeachersKnock_iosApp.swift in Sources */,
 				5459AE602EE1A2BF008EE0E4 /* GoalViewModel.swift in Sources */,
+				54F81CDC2EE1D47B002226B4 /* WeeklyReportDetailView.swift in Sources */,
 				54F81CD22EE1AC8E002226B4 /* DailyDetailViewModel.swift in Sources */,
 				5459AE5E2EE1A1F4008EE0E4 /* TimerViewModel.swift in Sources */,
+				54F81CDA2EE1D13B002226B4 /* ReportListView.swift in Sources */,
 				5459AE4A2EE19535008EE0E4 /* TimerView.swift in Sources */,
 				54F81CD42EE1B06C002226B4 /* DailyTimelineViewModel.swift in Sources */,
 			);

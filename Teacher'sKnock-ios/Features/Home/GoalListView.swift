@@ -10,7 +10,9 @@ struct GoalListView: View {
     @State private var showingCharacterDetail = false
     @State private var selectedGoal: Goal?
     
-    // ✨ 초기값은 로딩 중으로 설정
+    // 리포트 화면 이동을 위한 상태 변수
+    @State private var showingReportList = false
+    
     @State private var todayQuote: Quote = Quote(text: "오늘의 명언을 불러오는 중...", author: "")
     
     @EnvironmentObject var authManager: AuthManager
@@ -59,12 +61,26 @@ struct GoalListView: View {
             }
             .navigationTitle("\(authManager.userNickname)님의 D-day")
             .toolbar {
+                // ✨ [수정됨] 좌측 상단: 리포트 버튼 (문서 아이콘)
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button(action: { showingReportList = true }) {
+                        Image(systemName: "doc.text.image") // 👈 여기서 아이콘 변경됨!
+                            .font(.title3)
+                            .foregroundColor(brandColor)
+                    }
+                }
+                
+                // 우측 상단: 목표 추가 버튼
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button(action: { showingAddGoalSheet = true }) {
                         Image(systemName: "plus")
                             .foregroundColor(brandColor)
                     }
                 }
+            }
+            // 리포트 화면 연결
+            .navigationDestination(isPresented: $showingReportList) {
+                ReportListView()
             }
             .sheet(isPresented: $showingAddGoalSheet) {
                 AddGoalView()
@@ -79,17 +95,13 @@ struct GoalListView: View {
                 }
                 .presentationDetents([.medium])
             }
-            // ✨ 화면이 나타날 때 서버에서 명언 가져오기
             .onAppear {
                 loadQuote()
             }
         }
     }
     
-    // ✨ 명언 로딩 함수
     func loadQuote() {
-        // 이미 로딩된 명언이 있다면 (로딩 중이 아니라면) 굳이 다시 안 불러옴 (선택 사항)
-        // 매번 바꾸고 싶다면 이 조건문 제거
         if todayQuote.text != "오늘의 명언을 불러오는 중..." { return }
         
         QuoteManager.shared.fetchQuote { quote in
@@ -98,7 +110,6 @@ struct GoalListView: View {
                     self.todayQuote = quote
                 }
             } else {
-                // 실패 시 기본 명언
                 self.todayQuote = Quote(text: "실패는 성공의 어머니이다.", author: "에디슨")
             }
         }
@@ -112,8 +123,8 @@ struct GoalListView: View {
     }
 }
 
-// ... (하단 QuoteCard, GoalRow는 디자인 변경 없으므로 기존 코드 유지)
-// (이전에 작성해주신 칠판 디자인 코드를 그대로 쓰시면 됩니다!)
+// MARK: - Subviews (기존 코드 유지)
+
 struct QuoteCard: View {
     let quote: Quote
     @State private var displayedText: String = ""
