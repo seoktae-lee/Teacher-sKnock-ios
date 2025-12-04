@@ -1,6 +1,7 @@
 import SwiftUI
 import SwiftData
 import FirebaseAuth
+import Combine
 
 struct GoalListView: View {
     @Query private var goals: [Goal]

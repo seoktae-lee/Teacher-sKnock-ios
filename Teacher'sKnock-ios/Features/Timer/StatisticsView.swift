@@ -152,4 +152,3 @@ struct StatisticsView: View {
         }
     }
 }
-// ✨ [중요] 여기 아래에 있던 struct SubjectDetailView 코드는 삭제했습니다!
