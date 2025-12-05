@@ -2,7 +2,6 @@ import SwiftUI
 import SwiftData
 import Charts
 
-// [1] 겉포장지 (컨테이너 뷰)
 struct DailyDetailView: View {
     let userId: String
     let initialDate: Date
@@ -16,7 +15,6 @@ struct DailyDetailView: View {
     var body: some View {
         TabView(selection: $selectedIndex) {
             ForEach(-365...365, id: \.self) { offset in
-                // 페이징할 때마다 날짜를 계산해서 Content 뷰에 주입
                 let targetDate = Calendar.current.date(byAdding: .day, value: offset, to: initialDate) ?? initialDate
                 DailyReportContent(date: targetDate, userId: userId)
                     .tag(offset)
@@ -29,7 +27,6 @@ struct DailyDetailView: View {
     }
 }
 
-// [2] 내용물 (실제 콘텐츠 뷰)
 struct DailyReportContent: View {
     @StateObject private var viewModel: DailyDetailViewModel
     @Environment(\.modelContext) private var modelContext
@@ -37,7 +34,6 @@ struct DailyReportContent: View {
     @State private var selectedSchedule: ScheduleItem? = nil
     
     init(date: Date, userId: String) {
-        // StateObject 초기화 (date와 userId를 주입)
         _viewModel = StateObject(wrappedValue: DailyDetailViewModel(userId: userId, targetDate: date))
     }
     
@@ -92,9 +88,13 @@ struct DailyReportContent: View {
                 }
                 .padding(.horizontal)
                 
-                DailyTimelineView(schedules: viewModel.schedules, onItemTap: { item in
-                    selectedSchedule = item
-                })
+                DailyTimelineView(
+                    date: viewModel.targetDate,
+                    schedules: viewModel.schedules,
+                    onItemTap: { item in
+                        selectedSchedule = item
+                    }
+                )
                 .frame(height: 650)
                 .background(Color.white).cornerRadius(15)
                 .padding(.horizontal)
@@ -108,14 +108,12 @@ struct DailyReportContent: View {
             }
         }
         .sheet(item: $selectedSchedule) { item in
-            // 시트 닫힐 때 데이터 갱신을 위해 onDismiss 처리 가능
             EditScheduleView(item: item)
                 .onDisappear {
                     viewModel.fetchData()
                 }
         }
         .onAppear {
-            // 뷰 모델에 SwiftData Context 주입 및 데이터 로드 시작
             viewModel.setContext(modelContext)
         }
     }
@@ -124,6 +122,7 @@ struct DailyReportContent: View {
     
     private func scheduleRow(_ item: ScheduleItem) -> some View {
         HStack {
+            // 체크 버튼 (미뤄진 상태면 클릭 불가 + 주황색 아이콘)
             Button(action: { viewModel.toggleComplete(item) }) {
                 Image(systemName: item.isCompleted ? "checkmark.square.fill" : (item.isPostponed ? "arrow.turn.up.right.square" : "square"))
                     .foregroundColor(item.isCompleted ? .green : (item.isPostponed ? .orange : .gray))
@@ -143,6 +142,7 @@ struct DailyReportContent: View {
             
             Spacer()
             
+            // 미뤄짐 뱃지
             if item.isPostponed {
                 Text("미뤄짐")
                     .font(.caption2).foregroundColor(.orange)
@@ -154,7 +154,23 @@ struct DailyReportContent: View {
         }
         .padding().contentShape(Rectangle())
         .contextMenu {
-            Button { viewModel.duplicateToTomorrow(item) } label: { Label("내일 하기", systemImage: "arrow.turn.up.right") }
+            // ✨ [수정됨] 상태에 따라 다른 메뉴 표시
+            if item.isPostponed {
+                // 이미 미룬 경우 -> '취소' 버튼
+                Button {
+                    viewModel.cancelPostpone(item)
+                } label: {
+                    Label("미루기 취소", systemImage: "arrow.uturn.backward")
+                }
+            } else {
+                // 안 미룬 경우 -> '내일 하기' 버튼
+                Button {
+                    viewModel.duplicateToTomorrow(item)
+                } label: {
+                    Label("내일 하기", systemImage: "arrow.turn.up.right")
+                }
+            }
+            
             Button { selectedSchedule = item } label: { Label("수정하기", systemImage: "pencil") }
             Button(role: .destructive) { viewModel.deleteSchedule(item) } label: { Label("삭제하기", systemImage: "trash") }
         }

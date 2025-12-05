@@ -8,11 +8,9 @@ class DailyDetailViewModel: ObservableObject {
     let userId: String
     let targetDate: Date
     
-    // 뷰에서 감시할 데이터들
     @Published var schedules: [ScheduleItem] = []
     @Published var records: [StudyRecord] = []
     
-    // 파이차트용 데이터 구조체 (ViewModel 내부에 정의하거나 외부로 빼도 됨)
     struct ChartData: Identifiable {
         let id = UUID()
         let subject: String
@@ -28,7 +26,6 @@ class DailyDetailViewModel: ObservableObject {
         self.targetDate = targetDate
     }
     
-    // 뷰가 나타날 때(onAppear) 컨텍스트 주입받고 데이터 로드
     func setContext(_ context: ModelContext) {
         self.modelContext = context
         fetchData()
@@ -41,15 +38,15 @@ class DailyDetailViewModel: ObservableObject {
         let startOfDay = calendar.startOfDay(for: targetDate)
         let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay)!
         
-        // 1. 일정(Schedule) 가져오기
         let scheduleDescriptor = FetchDescriptor<ScheduleItem>(
             predicate: #Predicate { item in
-                item.ownerID == userId && item.startDate >= startOfDay && item.startDate < endOfDay
+                item.ownerID == userId &&
+                item.startDate < endOfDay &&
+                (item.endDate ?? item.startDate) > startOfDay
             },
             sortBy: [SortDescriptor(\.startDate)]
         )
         
-        // 2. 공부기록(Record) 가져오기
         let recordDescriptor = FetchDescriptor<StudyRecord>(
             predicate: #Predicate { record in
                 record.ownerID == userId && record.date >= startOfDay && record.date < endOfDay
@@ -64,7 +61,6 @@ class DailyDetailViewModel: ObservableObject {
         }
     }
     
-    // 파이차트 데이터 계산
     var pieData: [ChartData] {
         var dict: [String: Int] = [:]
         for record in records { dict[record.areaName, default: 0] += record.durationSeconds }
@@ -73,7 +69,6 @@ class DailyDetailViewModel: ObservableObject {
     
     var totalActualSeconds: Int { pieData.reduce(0) { $0 + $1.seconds } }
     
-    // 날짜 포맷팅
     var formattedDateString: String {
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy년 M월 d일 (EEEE)"
@@ -81,7 +76,7 @@ class DailyDetailViewModel: ObservableObject {
         return formatter.string(from: targetDate)
     }
     
-    // MARK: - 비즈니스 로직 (User Intents)
+    // MARK: - 비즈니스 로직
     
     func duplicateToTomorrow(_ item: ScheduleItem) {
         guard let context = modelContext else { return }
@@ -102,15 +97,26 @@ class DailyDetailViewModel: ObservableObject {
         )
         
         context.insert(newItem)
-        
-        // 싱크 매니저 호출 (옵셔널 바인딩이나 싱글톤 직접 호출)
         FirestoreSyncManager.shared.saveSchedule(newItem)
         
-        // 원본 상태 변경
+        // 원본 상태 변경 (미뤄짐 처리)
         item.isPostponed = true
         item.isCompleted = false
         
-        // 변경사항 저장 및 데이터 새로고침
+        saveContext()
+        fetchData()
+    }
+    
+    // ✨ [추가됨] 미루기 취소 (다시 오늘 할 일로 복구)
+    func cancelPostpone(_ item: ScheduleItem) {
+        // 미뤄짐 상태 해제
+        item.isPostponed = false
+        // (선택 사항) 복구 시 완료 상태는 false로 두는 것이 일반적
+        // item.isCompleted = false
+        
+        // *주의: 이미 내일로 복제된 일정은 자동으로 삭제되지 않습니다.
+        // (사용자가 내일 일정을 이미 수정했을 수도 있기 때문)
+        
         saveContext()
         fetchData()
     }
@@ -125,7 +131,6 @@ class DailyDetailViewModel: ObservableObject {
     func toggleComplete(_ item: ScheduleItem) {
         if !item.isPostponed {
             item.isCompleted.toggle()
-            // 변경 즉시 저장은 선택 사항이나, UX상 바로 반영되는 게 좋음
             saveContext()
         }
     }
