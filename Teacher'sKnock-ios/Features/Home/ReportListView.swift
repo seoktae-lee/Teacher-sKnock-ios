@@ -14,38 +14,20 @@ struct ReportListView: View {
     
     init(userId: String) {
         self.userId = userId
-        _records = Query(
-            filter: #Predicate<StudyRecord> { $0.ownerID == userId },
-            sort: \.date,
-            order: .reverse
-        )
+        _records = Query(filter: #Predicate<StudyRecord> { $0.ownerID == userId }, sort: \.date, order: .reverse)
     }
     
-    // 백그라운드 데이터 전송용 구조체
-    struct RecordData: Sendable {
-        let date: Date
-        let duration: Int
-    }
+    // 계산용 구조체 (가볍게)
+    struct RecordData: Sendable { let date: Date; let duration: Int }
+    struct ReportGroup: Identifiable, Sendable { let id = UUID(); let title: String; let rangeString: String; let totalSeconds: Int; let startDate: Date; let endDate: Date }
     
     var body: some View {
         VStack(spacing: 0) {
-            Picker("기간", selection: $selectedTab) {
-                Text("주간 리포트").tag(0)
-                Text("월간 리포트").tag(1)
-            }
-            .pickerStyle(.segmented)
-            .padding()
-            .background(Color.white)
+            Picker("기간", selection: $selectedTab) { Text("주간 리포트").tag(0); Text("월간 리포트").tag(1) }
+                .pickerStyle(.segmented).padding().background(Color.white)
             
             if isLoading {
-                Spacer()
-                VStack(spacing: 10) {
-                    ProgressView()
-                    Text("데이터 분석 중...")
-                        .font(.caption)
-                        .foregroundColor(.gray)
-                }
-                Spacer()
+                Spacer(); ProgressView("분석 중..."); Spacer()
             } else {
                 ScrollView {
                     LazyVStack(spacing: 15) {
@@ -53,64 +35,41 @@ struct ReportListView: View {
                             emptyView
                         } else if selectedTab == 0 {
                             ForEach(weeklyGroups, id: \.id) { group in
-                                NavigationLink(destination: WeeklyReportDetailView(
-                                    title: group.title,
-                                    startDate: group.startDate,
-                                    endDate: group.endDate,
-                                    userId: userId
-                                )) {
+                                NavigationLink(destination: WeeklyReportDetailView(title: group.title, startDate: group.startDate, endDate: group.endDate, userId: userId)) {
                                     ReportCard(title: group.title, dateRange: group.rangeString, totalTime: group.totalSeconds, isNew: isRecent(group.endDate))
                                 }.buttonStyle(.plain)
                             }
                         } else {
                             ForEach(monthlyGroups, id: \.id) { group in
-                                NavigationLink(destination: MonthlyReportDetailView(
-                                    title: group.title,
-                                    startDate: group.startDate,
-                                    endDate: group.endDate,
-                                    userId: userId
-                                )) {
+                                NavigationLink(destination: MonthlyReportDetailView(title: group.title, startDate: group.startDate, endDate: group.endDate, userId: userId)) {
                                     ReportCard(title: group.title, dateRange: group.rangeString, totalTime: group.totalSeconds, isNew: isRecent(group.endDate))
                                 }.buttonStyle(.plain)
                             }
                         }
-                    }
-                    .padding()
-                }
-                .background(Color(.systemGray6))
+                    }.padding()
+                }.background(Color(.systemGray6))
             }
         }
         .navigationTitle("학습 리포트")
         .navigationBarTitleDisplayMode(.inline)
-        .onAppear { // .task 대신 onAppear 사용
-            // ✨ [핵심 수정] 화면 진입 애니메이션이 끝날 때까지 0.5초 대기 후 계산 시작
-            if isLoading {
-                let rawData = records.map { RecordData(date: $0.date, duration: $0.durationSeconds) }
-                
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                    Task {
-                        await calculateInBackground(data: rawData)
-                    }
-                }
-            }
+        .task(id: records) {
+            // 리스트 계산은 여기서 (백그라운드)
+            let rawData = records.map { RecordData(date: $0.date, duration: $0.durationSeconds) }
+            await calculateInBackground(data: rawData)
         }
     }
     
     private func calculateInBackground(data: [RecordData]) async {
-        let result = await Task.detached(priority: .userInitiated) {
-            return ReportCalculator.process(data: data)
-        }.value
-        
+        let result = await Task.detached(priority: .userInitiated) { return ReportCalculator.process(data: data) }.value
         await MainActor.run {
             self.weeklyGroups = result.weekly
             self.monthlyGroups = result.monthly
-            withAnimation {
-                self.isLoading = false
-            }
+            withAnimation { self.isLoading = false }
         }
     }
     
-    // ... (이하 Helper 함수 및 ReportCalculator는 이전 코드와 동일하므로 그대로 유지) ...
+    // ... (ReportCalculator, ReportCard, emptyView 등은 기존 코드 유지) ...
+    // (위쪽 답변의 코드와 동일하므로 생략하지 않고 아래 붙여드립니다)
     
     private var emptyView: some View {
         VStack(spacing: 15) {
@@ -119,22 +78,16 @@ struct ReportListView: View {
             Text("공부를 기록하면 리포트가 쌓입니다!").font(.caption).foregroundColor(.gray)
         }.frame(maxWidth: .infinity, maxHeight: .infinity).padding(.top, 100)
     }
-    
-    private func isRecent(_ date: Date) -> Bool {
-        let diff = Calendar.current.dateComponents([.day], from: date, to: Date())
+    private func isRecent(_ d: Date) -> Bool {
+        let diff = Calendar.current.dateComponents([.day], from: d, to: Date())
         return (diff.day ?? 100) < 7
-    }
-    
-    struct ReportGroup: Identifiable, Sendable {
-        let id = UUID(); let title: String; let rangeString: String; let totalSeconds: Int; let startDate: Date; let endDate: Date
     }
 }
 
-// (ReportCalculator와 ReportCard는 이전과 동일합니다. 파일에 포함되어 있어야 합니다.)
+// 계산 로직 (유지)
 struct ReportCalculator {
     static func process(data: [ReportListView.RecordData]) -> (weekly: [ReportListView.ReportGroup], monthly: [ReportListView.ReportGroup]) {
         var calendar = Calendar.current; calendar.firstWeekday = 2; calendar.minimumDaysInFirstWeek = 4
-        
         let wGrouped = Dictionary(grouping: data) { r in "\(calendar.dateComponents([.yearForWeekOfYear, .weekOfYear], from: r.date).yearForWeekOfYear!)-\(calendar.dateComponents([.yearForWeekOfYear, .weekOfYear], from: r.date).weekOfYear!)" }
         let wSorted = wGrouped.keys.sorted(by: >)
         let weekly = wSorted.compactMap { key -> ReportListView.ReportGroup? in
@@ -147,7 +100,6 @@ struct ReportCalculator {
             }
             return nil
         }
-        
         let mGrouped = Dictionary(grouping: data) { r in "\(calendar.dateComponents([.year, .month], from: r.date).year!)-\(calendar.dateComponents([.year, .month], from: r.date).month!)" }
         let mSorted = mGrouped.keys.sorted(by: >)
         let monthly = mSorted.compactMap { key -> ReportListView.ReportGroup? in
@@ -168,10 +120,7 @@ struct ReportCard: View {
     var body: some View {
         HStack {
             VStack(alignment: .leading, spacing: 6) {
-                HStack(spacing: 8) {
-                    Text(title).font(.headline).foregroundColor(.primary)
-                    if isNew { Text("NEW").font(.system(size: 10, weight: .bold)).foregroundColor(.white).padding(.horizontal, 6).padding(.vertical, 3).background(Color.red.opacity(0.8)).clipShape(Capsule()) }
-                }
+                HStack(spacing: 8) { Text(title).font(.headline).foregroundColor(.primary); if isNew { Text("NEW").font(.system(size: 10, weight: .bold)).foregroundColor(.white).padding(.horizontal, 6).padding(.vertical, 3).background(Color.red.opacity(0.8)).clipShape(Capsule()) } }
                 Text(dateRange).font(.caption).foregroundColor(.gray)
                 Text("총 학습 시간: \(formatTime(totalTime))").font(.caption2).fontWeight(.bold).foregroundColor(.blue).padding(.top, 2)
             }

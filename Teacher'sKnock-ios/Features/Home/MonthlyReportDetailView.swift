@@ -8,17 +8,9 @@ struct MonthlyReportDetailView: View {
     let endDate: Date
     let userId: String
     
-    // 내 데이터만 가져오도록 필터링
-    @Query private var allRecords: [StudyRecord]
-    
-    init(title: String, startDate: Date, endDate: Date, userId: String) {
-        self.title = title
-        self.startDate = startDate
-        self.endDate = endDate
-        self.userId = userId
-        
-        _allRecords = Query(filter: #Predicate<StudyRecord> { $0.ownerID == userId })
-    }
+    // ✨ @Query 제거 -> @State로 변경 (렉 방지 및 안전성 확보)
+    @State private var records: [StudyRecord] = []
+    @Environment(\.modelContext) private var modelContext
     
     // 차트용 데이터 구조체
     struct ChartData: Identifiable {
@@ -26,6 +18,14 @@ struct MonthlyReportDetailView: View {
         let subject: String
         let seconds: Int
         var color: Color { SubjectName.color(for: subject) }
+    }
+    
+    init(title: String, startDate: Date, endDate: Date, userId: String) {
+        self.title = title
+        self.startDate = startDate
+        self.endDate = endDate
+        self.userId = userId
+        // init에서는 데이터를 가져오지 않음 (가볍게 유지)
     }
     
     var body: some View {
@@ -42,8 +42,7 @@ struct MonthlyReportDetailView: View {
                         .font(.headline)
                         .padding(.horizontal)
                     
-                    // ✨ [중요] 아래에 정의된 StudyHeatmapView를 여기서 사용
-                    StudyHeatmapView(startDate: startDate, endDate: endDate, records: filteredRecords)
+                    StudyHeatmapView(startDate: startDate, endDate: endDate, records: records)
                         .padding(.horizontal)
                 }
                 
@@ -112,22 +111,40 @@ struct MonthlyReportDetailView: View {
         .navigationTitle(title)
         .navigationBarTitleDisplayMode(.inline)
         .background(Color(.systemGray6))
+        // ✨ 화면이 뜰 때 데이터 로드
+        .task {
+            fetchData()
+        }
+    }
+    
+    // ✨ 데이터 로드 함수 (사용자 분리 적용)
+    private func fetchData() {
+        let descriptor = FetchDescriptor<StudyRecord>(
+            predicate: #Predicate<StudyRecord> { $0.ownerID == userId }
+        )
+        
+        do {
+            let allR = try modelContext.fetch(descriptor)
+            
+            // 날짜 범위 필터링 (메모리에서 수행)
+            let rangeEnd = Calendar.current.date(byAdding: .day, value: 1, to: endDate)!
+            
+            self.records = allR.filter { $0.date >= startDate && $0.date < rangeEnd }
+            
+        } catch {
+            print("월간 리포트 로드 실패: \(error)")
+        }
     }
     
     // MARK: - Helpers
     
-    private var filteredRecords: [StudyRecord] {
-        let end = Calendar.current.date(byAdding: .day, value: 1, to: endDate)!
-        return allRecords.filter { $0.date >= startDate && $0.date < end }
-    }
-    
     private var totalSeconds: Int {
-        filteredRecords.reduce(0) { $0 + $1.durationSeconds }
+        records.reduce(0) { $0 + $1.durationSeconds }
     }
     
     private var pieData: [ChartData] {
         var dict: [String: Int] = [:]
-        for record in filteredRecords {
+        for record in records {
             dict[record.areaName, default: 0] += record.durationSeconds
         }
         return dict.map { ChartData(subject: $0.key, seconds: $0.value) }
@@ -179,13 +196,13 @@ struct MonthlyReportDetailView: View {
     }
 }
 
-// ✨ [필수] 이 구조체가 파일 안에 꼭 있어야 합니다!
+// ✨ [필수] 잔디 심기 뷰 (파일 내 포함)
 struct StudyHeatmapView: View {
     let startDate: Date
     let endDate: Date
     let records: [StudyRecord]
     
-    let columns = Array(repeating: GridItem(.flexible(), spacing: 4), count: 7) // 7열 (일~토)
+    let columns = Array(repeating: GridItem(.flexible(), spacing: 4), count: 7)
     
     var days: [Date] {
         var dates: [Date] = []
@@ -198,7 +215,6 @@ struct StudyHeatmapView: View {
         return dates
     }
     
-    // 날짜별 공부 시간 매핑
     var studyMap: [Date: Int] {
         var map: [Date: Int] = [:]
         let calendar = Calendar.current
@@ -212,18 +228,15 @@ struct StudyHeatmapView: View {
     var body: some View {
         VStack(alignment: .leading) {
             LazyVGrid(columns: columns, spacing: 4) {
-                // 요일 헤더
                 ForEach(["일", "월", "화", "수", "목", "금", "토"], id: \.self) { day in
                     Text(day).font(.caption2).foregroundColor(.gray)
                 }
                 
-                // 날짜 셀 (앞에 빈칸 채우기용)
                 let firstWeekday = Calendar.current.component(.weekday, from: startDate)
                 ForEach(0..<(firstWeekday - 1), id: \.self) { _ in
                     Color.clear
                 }
                 
-                // 실제 날짜
                 ForEach(days, id: \.self) { date in
                     let seconds = studyMap[Calendar.current.startOfDay(for: date)] ?? 0
                     RoundedRectangle(cornerRadius: 4)
@@ -238,12 +251,11 @@ struct StudyHeatmapView: View {
         .shadow(color: .black.opacity(0.02), radius: 2, x: 0, y: 1)
     }
     
-    // 공부 시간에 따른 색상 진하기 결정
     func getColor(seconds: Int) -> Color {
-        if seconds == 0 { return Color.gray.opacity(0.1) } // 공부 안 함
-        if seconds < 3600 { return Color.blue.opacity(0.2) } // 1시간 미만
-        if seconds < 10800 { return Color.blue.opacity(0.5) } // 3시간 미만
-        if seconds < 18000 { return Color.blue.opacity(0.8) } // 5시간 미만
-        return Color.blue // 5시간 이상 (열공!)
+        if seconds == 0 { return Color.gray.opacity(0.1) }
+        if seconds < 3600 { return Color.blue.opacity(0.2) }
+        if seconds < 10800 { return Color.blue.opacity(0.5) }
+        if seconds < 18000 { return Color.blue.opacity(0.8) }
+        return Color.blue
     }
 }
