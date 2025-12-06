@@ -2,22 +2,30 @@ import SwiftUI
 
 struct RootView: View {
     @EnvironmentObject var authManager: AuthManager
-    @EnvironmentObject var settingsManager: SettingsManager
-    // ✨ SwiftData의 핵심 도구(Context) 가져오기
-    @Environment(\.modelContext) var modelContext
+    @State private var showSplash: Bool = true // 스플래시 표시 여부
     
     var body: some View {
-        Group {
-            if authManager.isLoggedIn {
-                MainTabView()
+        ZStack {
+            if showSplash {
+                // 1. 스플래시 화면
+                SplashView()
+                    .transition(.opacity) // 사라질 때 페이드 아웃
             } else {
-                LoginView()
+                // 2. 스플래시 종료 후: 로그인 상태에 따라 분기
+                if authManager.isLoggedIn {
+                    MainTabView() // 메인 화면
+                } else {
+                    LoginView()   // 로그인 화면
+                }
             }
         }
         .onAppear {
-            // ✨ [핵심] 여기서 매니저들을 연결하고, SwiftData 권한도 줍니다.
-            print("RootView: 매니저 및 데이터 연결 시도")
-            authManager.setup(settingsManager: settingsManager, modelContext: modelContext)
+            // 2초 뒤에 스플래시를 끄고 메인 로직으로 진입
+            DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+                withAnimation {
+                    showSplash = false
+                }
+            }
         }
     }
 }
