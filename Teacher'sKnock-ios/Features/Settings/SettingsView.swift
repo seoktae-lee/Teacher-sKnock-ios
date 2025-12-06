@@ -7,6 +7,8 @@ struct SettingsView: View {
     
     @State private var showingLogoutAlert = false
     @State private var showingDeleteAccountAlert = false
+    @State private var showingErrorAlert = false
+    @State private var errorMessage = ""
     
     var appVersion: String {
         Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0.0"
@@ -72,21 +74,31 @@ struct SettingsView: View {
                         .foregroundColor(.red)
                         .alert("회원 탈퇴", isPresented: $showingDeleteAccountAlert) {
                             Button("취소", role: .cancel) {}
-                            // ✨ [수정됨] completion 클로저를 추가하여 에러 해결!
                             Button("탈퇴하기", role: .destructive) {
                                 authManager.deleteAccount { success, error in
-                                    if success {
-                                        print("회원 탈퇴 성공")
-                                    } else {
-                                        print("회원 탈퇴 실패: \(error?.localizedDescription ?? "알 수 없음")")
+                                    if !success {
+                                        // ✨ 실패 시 에러 알림 띄우기
+                                        errorMessage = "탈퇴에 실패했습니다.\n보안을 위해 로그아웃 후 다시 로그인해서 시도해주세요."
+                                        if let err = error {
+                                            print("Error details: \(err)")
+                                        }
+                                        showingErrorAlert = true
                                     }
                                 }
                             }
-                        } message: { Text("모든 데이터가 삭제되며 되돌릴 수 없습니다.") }
+                        } message: {
+                            Text("모든 데이터가 영구적으로 삭제됩니다. 이 작업은 되돌릴 수 없습니다.")
+                        }
                 }
             }
             .navigationTitle("설정")
             .listStyle(.insetGrouped)
+            // ✨ 에러 알림창 추가
+            .alert("알림", isPresented: $showingErrorAlert) {
+                Button("확인", role: .cancel) {}
+            } message: {
+                Text(errorMessage)
+            }
         }
     }
 }
