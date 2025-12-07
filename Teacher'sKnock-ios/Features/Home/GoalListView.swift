@@ -47,8 +47,11 @@ struct GoalListView: View {
                     List {
                         ForEach(goals) { goal in
                             Button(action: {
-                                selectedGoal = goal
-                                showingCharacterDetail = true
+                                // ✨ [핵심 수정] 캐릭터가 있는 목표만 상세화면(캐릭터 뷰) 열기
+                                if goal.hasCharacter {
+                                    selectedGoal = goal
+                                    showingCharacterDetail = true
+                                }
                             }) {
                                 GoalRow(goal: goal, userId: currentUserId)
                             }
@@ -63,7 +66,6 @@ struct GoalListView: View {
             }
             .navigationTitle("\(authManager.userNickname)님의 D-day")
             .toolbar {
-                // ✨ [수정됨] Button 대신 NavigationLink 직접 사용 (가장 안전한 방식)
                 ToolbarItem(placement: .navigationBarLeading) {
                     HStack(spacing: 15) {
                         // 1. 리포트 바로가기
@@ -89,6 +91,7 @@ struct GoalListView: View {
             .sheet(isPresented: $showingAddGoalSheet) {
                 AddGoalView()
             }
+            // 상세 화면 (캐릭터가 있을 때만 selectedGoal이 설정되어 열림)
             .sheet(item: $selectedGoal) { goal in
                 VStack(spacing: 30) {
                     Text("나의 성장 기록").font(.title2).bold().padding(.top, 30)
@@ -143,9 +146,7 @@ struct GoalListView: View {
     }
 }
 
-// 하위 뷰들은 기존과 동일합니다. (CompactQuoteView, GoalRow)
-// 아래 코드는 기존 파일에 있는 것을 그대로 두시면 됩니다. (생략하지 않고 넣어드립니다)
-
+// 하위 뷰들은 기존과 동일합니다.
 struct CompactQuoteView: View {
     let quote: Quote
     var body: some View {
