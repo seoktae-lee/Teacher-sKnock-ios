@@ -2,6 +2,8 @@ import SwiftUI
 
 struct RootView: View {
     @EnvironmentObject var authManager: AuthManager
+    @EnvironmentObject var settingsManager: SettingsManager
+    @Environment(\.modelContext) var modelContext
     @State private var showSplash: Bool = true // 스플래시 표시 여부
     
     var body: some View {
@@ -20,6 +22,9 @@ struct RootView: View {
             }
         }
         .onAppear {
+            // ✨ [핵심] 중요: 매니저들 연결 (Dependency Injection)
+            authManager.setup(settingsManager: settingsManager, modelContext: modelContext)
+            
             // 2초 뒤에 스플래시를 끄고 메인 로직으로 진입
             DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
                 withAnimation {

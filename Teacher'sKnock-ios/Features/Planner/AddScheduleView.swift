@@ -3,140 +3,75 @@ import SwiftData
 import FirebaseAuth
 
 struct AddScheduleView: View {
-    @Environment(\.modelContext) private var modelContext
-    @Environment(\.dismiss) private var dismiss
+    @Environment(\.dismiss) var dismiss
+    @Environment(\.modelContext) var modelContext
     
-    @StateObject private var viewModel: AddScheduleViewModel
+    @State private var title = ""
+    @State private var startDate: Date
+    @State private var endDate: Date
+    @State private var selectedSubject: String = "교육학"
     
-    private let brandColor = Color(red: 0.35, green: 0.65, blue: 0.95)
+    let subjects = ["교육학", "전공", "한국사", "기타"]
     
-    init() {
-        let userId = Auth.auth().currentUser?.uid ?? ""
-        _viewModel = StateObject(wrappedValue: AddScheduleViewModel(userId: userId))
+    // ✨ [핵심 해결] 외부에서 날짜를 받아오는 생성자 추가
+    // 이 코드가 있어야 DailyDetailView의 "Argument passed to call..." 오류가 사라집니다.
+    init(selectedDate: Date = Date()) {
+        let now = Date()
+        let calendar = Calendar.current
+        
+        // 선택된 날짜의 연/월/일 + 현재 시간
+        var components = calendar.dateComponents([.year, .month, .day], from: selectedDate)
+        let timeComponents = calendar.dateComponents([.hour, .minute], from: now)
+        components.hour = timeComponents.hour
+        components.minute = timeComponents.minute
+        
+        let start = calendar.date(from: components) ?? selectedDate
+        let end = calendar.date(byAdding: .hour, value: 1, to: start) ?? start.addingTimeInterval(3600)
+        
+        _startDate = State(initialValue: start)
+        _endDate = State(initialValue: end)
     }
     
     var body: some View {
         NavigationStack {
-            ScrollView {
-                VStack(spacing: 20) {
-                    
-                    // 1. 일정 순서 미리보기 (삭제 기능 연결됨)
-                    VStack(alignment: .leading, spacing: 8) {
-                        HStack {
-                            Text("일정 순서 미리보기")
-                                .font(.caption).fontWeight(.bold).foregroundColor(.gray)
-                            Spacer()
-                            Text("기존 일정 길게 눌러 삭제")
-                                .font(.caption2).foregroundColor(.gray.opacity(0.8))
-                        }
-                        .padding(.horizontal)
-                        
-                        SchedulePreviewView(
-                            existingSchedules: viewModel.existingSchedules,
-                            draftSchedule: viewModel.draftSchedule,
-                            onDelete: { item in
-                                // ✨ 삭제 요청 시 뷰모델 호출
-                                withAnimation {
-                                    viewModel.deleteSchedule(item)
-                                }
-                            }
-                        )
-                        .background(Color(.systemGray6).opacity(0.5))
-                        .cornerRadius(12)
-                        .padding(.horizontal)
-                    }
-                    .padding(.top)
-                    
-                    // 2. 입력 폼
-                    VStack(spacing: 0) {
-                        TextField("일정 제목 (예: 교육학 암기)", text: $viewModel.title)
-                            .font(.headline)
-                            .padding()
-                            .background(Color.white)
-                        
-                        Divider().padding(.leading)
-                        
-                        TextField("상세 메모 (선택)", text: $viewModel.details)
-                            .padding()
-                            .background(Color.white)
-                    }
-                    .cornerRadius(12)
-                    .padding(.horizontal)
-                    
-                    // 3. 시간 설정 및 겹침 알림
-                    VStack(spacing: 0) {
-                        DatePicker("시작", selection: $viewModel.startDate, displayedComponents: [.date, .hourAndMinute])
-                            .tint(brandColor)
-                            .padding()
-                            .onChange(of: viewModel.startDate) { _ in
-                                viewModel.fetchExistingSchedules()
-                                if viewModel.endDate <= viewModel.startDate {
-                                    viewModel.endDate = viewModel.startDate.addingTimeInterval(3600)
-                                }
-                            }
-                        
-                        Divider().padding(.leading)
-                        
-                        DatePicker("종료", selection: $viewModel.endDate, in: viewModel.startDate..., displayedComponents: [.date, .hourAndMinute])
-                            .tint(brandColor)
-                            .padding()
-                        
-                        // ✨ [조건부 알림] 겹치는 일정이 있을 때만 표시
-                        if let conflictName = viewModel.overlappingScheduleTitle {
-                            Divider().padding(.horizontal)
-                            HStack(alignment: .top) {
-                                Image(systemName: "exclamationmark.triangle.fill")
-                                    .foregroundColor(.orange)
-                                    .padding(.top, 2)
-                                VStack(alignment: .leading) {
-                                    Text("시간이 겹치는 일정이 있습니다!")
-                                        .font(.caption).fontWeight(.bold)
-                                        .foregroundColor(.orange)
-                                    Text("'\(conflictName)'")
-                                        .font(.caption)
-                                        .foregroundColor(.orange.opacity(0.8))
-                                }
-                                Spacer()
-                            }
-                            .padding()
-                            .background(Color.orange.opacity(0.1))
+            Form {
+                Section(header: Text("일정 정보")) {
+                    TextField("일정 제목 (예: 교육학 인강 듣기)", text: $title)
+                    Picker("과목", selection: $selectedSubject) {
+                        ForEach(subjects, id: \.self) { subject in
+                            Text(subject).tag(subject)
                         }
                     }
-                    .background(Color.white)
-                    .cornerRadius(12)
-                    .padding(.horizontal)
-                    
-                    // 4. 옵션
-                    Toggle("시작 전 알림 받기", isOn: $viewModel.hasReminder)
-                        .tint(brandColor)
-                        .padding()
-                        .background(Color.white)
-                        .cornerRadius(12)
-                        .padding(.horizontal)
                 }
-                .padding(.bottom, 50)
+                Section(header: Text("시간 설정")) {
+                    DatePicker("시작", selection: $startDate, displayedComponents: [.hourAndMinute])
+                    DatePicker("종료", selection: $endDate, displayedComponents: [.hourAndMinute])
+                }
             }
-            .background(Color(.systemGray6))
-            .navigationTitle("새 일정 추가")
+            .navigationTitle("일정 추가")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button("취소") { dismiss() }
-                        .foregroundColor(.red)
+                ToolbarItem(placement: .cancellationAction) { Button("취소") { dismiss() } }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("저장") { saveSchedule() }.disabled(title.isEmpty)
                 }
-                
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("저장") {
-                        viewModel.saveSchedule { dismiss() }
-                    }
-                    .fontWeight(.bold)
-                    .foregroundColor(brandColor)
-                    .disabled(viewModel.title.isEmpty)
-                }
-            }
-            .onAppear {
-                viewModel.setContext(modelContext)
             }
         }
+    }
+    
+    private func saveSchedule() {
+        guard let uid = Auth.auth().currentUser?.uid else { return }
+        
+        // 1번 파일(Model)이 수정되었다면 여기서 오류가 나지 않습니다.
+        let newSchedule = ScheduleItem(
+            title: title,
+            startDate: startDate,
+            endDate: endDate,
+            subject: selectedSubject,
+            isCompleted: false,
+            ownerID: uid
+        )
+        modelContext.insert(newSchedule)
+        dismiss()
     }
 }
